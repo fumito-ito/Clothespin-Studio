@@ -68,5 +68,5 @@
 
   <circle cx="70" cy="430" r="6" fill="#ef6c4d" stroke="#b91c1c" stroke-width="1.2"/>
   <text x="86" y="434" font-size="12" fill="#334155">JAW（オス）：相手を挟む側・1ピンに1つ</text>
-  <text x="70" y="460" font-size="12" fill="#64748b">回転は 30° 刻み。roll 範囲＝平先端 ±135° / リング ±90°、pitch（g4,g6）±90°（暫定）。</text>
+  <text x="70" y="460" font-size="12" fill="#64748b">回転は 30° 刻み。roll＝平先端 ±135°（離散値は ±120°）/ リング ±90°、pitch（g4,g6）±90°（暫定）。</text>
 </svg>

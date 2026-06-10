@@ -59,7 +59,7 @@ interface Pin {
 interface PaletteColor {
   id: string;     // 例: "blue"
   name: string;   // 表示名（i18n キー or 文言）
-  hex: string;    // "#1f6fe0"
+  hex: string;    // 例: "#0C48A3"
 }
 
 interface ProjectMeta {
@@ -132,7 +132,8 @@ interface Project {
 - `connection.parentId` が存在し、自分自身でない。
 - 接続グラフに **閉路がない**（フォレストである）。
 - 同一 `(parentId, gripIndex)` の重複（ソケット二重占有）がない。
-- ルートピン（`connection: null`）は `transform` を持つ。
+- ルートピン（`connection: null`）は `transform` を持つ。逆に `connection` を持つピンの `transform` は
+  無視する（保存時は省略する。両方あっても `connection` を正とする）。
 - `colorId` が `palette` に存在する（無ければ既定色にフォールバック）。
 - `gripIndex` が有効範囲内（`0 … 6`）。
 - `roll` / `pitch` がソケット種別の許容範囲・刻み（30°）に収まる（[02 §5.1](02-clothespin-spec.md)）。`pitch` は丸線リング（`g4`/`g6`）のみ有効。

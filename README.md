@@ -32,6 +32,7 @@ LEGO 向けの [BrickLink Studio](https://www.bricklink.com/v3/studio/main.page)
 ## 洗濯バサミの基準仕様
 
 - 標準サイズ: **幅 3.9 × 奥行 6 × 高さ 1.2 cm**（クリップ式 / 金属スプリング付き）
+  ※設計ドキュメント内では 長さ 6.0 × 高さ 3.9 × 厚み 1.2 cm の呼称に統一（対応表は [02 §2](docs/02-clothespin-spec.md)）
 - 接続点: **GRIP ソケット 7 点**（ハンドル先端×2 / ジョー先端×2 / スプリングリング×3）+ **JAW コネクタ 1 点**
 - 標準カラー: ブルー `#0C48A3` / ホワイト `#FFFFFF` / ウォームグレー `#B1A29A`
 - 形状の基準: [docs/assets/clothespin-frame.svg](docs/assets/clothespin-frame.svg)
