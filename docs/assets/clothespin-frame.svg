@@ -1,71 +1,72 @@
-<svg viewBox="0 0 840 560" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Helvetica, Arial, sans-serif">
-  <rect x="0" y="0" width="840" height="560" fill="#ffffff"/>
+<svg viewBox="0 0 680 484" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Helvetica, Arial, sans-serif">
+  <rect width="680" height="484" fill="#ffffff"/>
 
-  <!-- title -->
-  <text x="420" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">洗濯バサミ ローカル座標系と接続点（側面ビュー）</text>
-  <text x="420" y="62" text-anchor="middle" font-size="13" fill="#64748b">原点 = スプリング中心 / 寸法 6.0(長さ) × 3.9(高さ) × 1.2(厚み) cm</text>
+  <text x="40" y="30" font-size="16" font-weight="700" fill="#0f172a">洗濯バサミ：7つの GRIP ソケット（メス）と JAW コネクタ（オス）</text>
+  <text x="40" y="50" font-size="12" fill="#64748b">原点＝金属スプリング中心 ／ 寸法 6.0(長さ X)×3.9(高さ Z)×1.2(厚み Y)cm ／ +X＝鼻先方向（図では左）</text>
 
-  <!-- axes -->
-  <g stroke="#94a3b8" stroke-width="1.5">
-    <line x1="160" y1="300" x2="700" y2="300" stroke-dasharray="4 4"/>
-    <line x1="410" y1="470" x2="410" y2="130" stroke-dasharray="4 4"/>
-  </g>
-  <!-- X arrow -->
-  <polygon points="700,300 686,294 686,306" fill="#94a3b8"/>
-  <text x="690" y="324" text-anchor="end" font-size="13" fill="#475569">+X (長さ / 鼻先 → 6.0cm)</text>
-  <!-- Z arrow -->
-  <polygon points="410,130 404,144 416,144" fill="#94a3b8"/>
-  <text x="424" y="140" font-size="13" fill="#475569">+Z (高さ 3.9cm)</text>
-  <!-- Y note -->
-  <text x="424" y="452" font-size="13" fill="#475569">+Y (厚み 1.2cm / 紙面の奥)</text>
+  <!-- plastic levers -->
+  <rect x="300" y="146" width="320" height="28" rx="13" fill="#2f6fe0" stroke="#1d4ed8" stroke-width="2" transform="rotate(-11 390 168)"/>
+  <rect x="300" y="146" width="320" height="28" rx="13" fill="#2f6fe0" stroke="#1d4ed8" stroke-width="2" transform="rotate(11 390 168)"/>
 
-  <!-- clothespin: two crossed levers (clip mechanism) -->
-  <g>
-    <!-- lever A: rotate -9deg around (410,300) -->
-    <rect x="260" y="284" width="300" height="32" rx="14" fill="#2563eb" transform="rotate(-9 410 300)"/>
-    <!-- lever B: rotate +9deg around (410,300) -->
-    <rect x="260" y="284" width="300" height="32" rx="14" fill="#2563eb" opacity="0.92" transform="rotate(9 410 300)"/>
-    <!-- spring ring -->
-    <circle cx="410" cy="300" r="23" fill="none" stroke="#6b7280" stroke-width="5"/>
-    <circle cx="410" cy="300" r="14" fill="none" stroke="#9ca3af" stroke-width="3"/>
-  </g>
+  <!-- metal spring ring -->
+  <circle cx="390" cy="168" r="44" fill="none" stroke="#9aa0a6" stroke-width="5"/>
+  <circle cx="390" cy="168" r="30" fill="none" stroke="#b9bdc2" stroke-width="3"/>
 
-  <!-- JAW connector (male) at nose -->
-  <g>
-    <polygon points="600,300 576,289 576,311" fill="#dc2626"/>
-    <circle cx="566" cy="300" r="7" fill="#dc2626"/>
-    <text x="612" y="296" font-size="13" font-weight="700" fill="#b91c1c">JAW コネクタ（オス）</text>
-    <text x="612" y="314" font-size="12" fill="#7f1d1d">1個 / 1つの洗濯バサミ・他のバサミを挟む側</text>
-  </g>
+  <!-- JAW connector (mouth) -->
+  <circle cx="252" cy="168" r="9" fill="#ef6c4d"/>
+  <line x1="263" y1="168" x2="294" y2="168" stroke="#ef6c4d" stroke-width="2.5"/>
+  <polygon points="300,168 291,163 291,173" fill="#ef6c4d"/>
+  <text x="252" y="149" font-size="12" font-weight="700" fill="#b91c1c" text-anchor="middle">JAW</text>
 
-  <!-- grip sockets (female) -->
+  <!-- 1-DOF grip sockets (roll only): g0,g1,g2,g3,g5 -->
   <g fill="#f59e0b" stroke="#b45309" stroke-width="1.5">
-    <!-- handle legs (left of spring) -->
-    <rect x="305" y="228" width="13" height="13" rx="2"/>
-    <rect x="256" y="220" width="13" height="13" rx="2"/>
-    <rect x="305" y="259" width="13" height="13" rx="2"/>
-    <rect x="256" y="267" width="13" height="13" rx="2"/>
-    <!-- jaw exterior (right of spring) -->
-    <rect x="522" y="225" width="13" height="13" rx="2"/>
-    <rect x="522" y="282" width="13" height="13" rx="2"/>
+    <circle cx="615" cy="124" r="9"/>
+    <circle cx="615" cy="212" r="9"/>
+    <circle cx="302" cy="151" r="9"/>
+    <circle cx="302" cy="185" r="9"/>
+    <circle cx="434" cy="168" r="9"/>
   </g>
-  <g font-size="11" fill="#92400e" font-weight="700">
-    <text x="300" y="224" text-anchor="middle">g0</text>
-    <text x="251" y="216" text-anchor="middle">g1</text>
-    <text x="300" y="289" text-anchor="middle">g2</text>
-    <text x="251" y="295" text-anchor="middle">g3</text>
-    <text x="544" y="227" >g4</text>
-    <text x="544" y="300" >g5</text>
+  <!-- 2-DOF grip sockets (roll + pitch): g4,g6 -->
+  <g fill="#0d9488" stroke="#0f766e" stroke-width="1.5">
+    <circle cx="390" cy="124" r="9"/>
+    <circle cx="390" cy="212" r="9"/>
+  </g>
+
+  <g font-size="12" font-weight="700">
+    <text x="598" y="120" text-anchor="end" fill="#92400e">g0</text>
+    <text x="598" y="224" text-anchor="end" fill="#92400e">g1</text>
+    <text x="302" y="139" text-anchor="middle" fill="#92400e">g2</text>
+    <text x="302" y="205" text-anchor="middle" fill="#92400e">g3</text>
+    <text x="452" y="172" text-anchor="start" fill="#92400e">g5</text>
+    <text x="390" y="112" text-anchor="middle" fill="#0f766e">g4</text>
+    <text x="390" y="232" text-anchor="middle" fill="#0f766e">g6</text>
   </g>
 
   <!-- legend -->
-  <g transform="translate(160,498)">
-    <rect x="0" y="0" width="14" height="14" rx="3" fill="#2563eb"/>
-    <text x="22" y="12" font-size="13" fill="#334155">プラスチック本体（脚 = 把持される面）</text>
-    <circle cx="270" cy="7" r="7" fill="none" stroke="#6b7280" stroke-width="3"/>
-    <text x="284" y="12" font-size="13" fill="#334155">金属スプリング（= 原点）</text>
-    <rect x="452" y="0" width="14" height="14" rx="2" fill="#f59e0b" stroke="#b45309"/>
-    <text x="474" y="12" font-size="13" fill="#334155">GRIP ソケット（メス・g0…gN）</text>
+  <line x1="40" y1="272" x2="640" y2="272" stroke="#cbd5e1" stroke-width="1"/>
+  <g fill="#f59e0b" stroke="#b45309" stroke-width="1.2">
+    <circle cx="70" cy="300" r="6"/><circle cx="70" cy="324" r="6"/><circle cx="70" cy="348" r="6"/><circle cx="70" cy="372" r="6"/>
+    <circle cx="360" cy="300" r="6"/>
   </g>
-  <text x="160" y="536" font-size="12" fill="#64748b">※ 接続 = あるバサミの JAW を、別のバサミの GRIP ソケットに嵌めることで成立する（クリップで挟み合う方式）。</text>
+  <g fill="#0d9488" stroke="#0f766e" stroke-width="1.2">
+    <circle cx="360" cy="324" r="6"/><circle cx="360" cy="348" r="6"/>
+  </g>
+  <g font-size="12" fill="#334155">
+    <text x="86" y="304">g0 上ハンドル（脚）先端</text>
+    <text x="86" y="328">g1 下ハンドル（脚）先端</text>
+    <text x="86" y="352">g2 上ジョー（鼻先）先端</text>
+    <text x="86" y="376">g3 下ジョー（鼻先）先端</text>
+    <text x="376" y="304">g5 金属スプリング・ハンドル側</text>
+    <text x="376" y="328">g4 金属スプリング・上（＋pitch）</text>
+    <text x="376" y="352">g6 金属スプリング・下（＋pitch）</text>
+  </g>
+
+  <circle cx="70" cy="404" r="6" fill="#f59e0b" stroke="#b45309" stroke-width="1.2"/>
+  <text x="86" y="408" font-size="12" fill="#334155">アンバー＝roll のみ（1自由度: g0–g3, g5）</text>
+  <circle cx="380" cy="404" r="6" fill="#0d9488" stroke="#0f766e" stroke-width="1.2"/>
+  <text x="396" y="408" font-size="12" fill="#334155">ティール＝roll＋pitch（2自由度: g4, g6）</text>
+
+  <circle cx="70" cy="430" r="6" fill="#ef6c4d" stroke="#b91c1c" stroke-width="1.2"/>
+  <text x="86" y="434" font-size="12" fill="#334155">JAW（オス）：相手を挟む側・1ピンに1つ</text>
+  <text x="70" y="460" font-size="12" fill="#64748b">回転は 30° 刻み。roll 範囲＝平先端 ±135° / リング ±90°、pitch（g4,g6）±90°（暫定）。</text>
 </svg>

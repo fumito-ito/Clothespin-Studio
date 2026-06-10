@@ -45,8 +45,8 @@ interface Transform {
 interface Connection {
   parentId: string;   // 親ピンの id
   gripIndex: number;  // 親の GRIP ソケット番号 (g0=0, g1=1, ...)
-  roll: number;       // 度。離散ステップ（既定 90）
-  flip: boolean;      // 表裏反転
+  roll: number;       // 度。30° 刻み。範囲はソケット種別で異なる（02 §5.1）
+  pitch?: number;     // 度。30° 刻み。丸線リング(g4/g6)のみ有効。省略時は 0
 }
 
 interface Pin {
@@ -97,9 +97,9 @@ interface Project {
     "appVersion": "0.1.0"
   },
   "palette": [
-    { "id": "blue",  "name": "ブルー",   "hex": "#1f6fe0" },
-    { "id": "red",   "name": "レッド",   "hex": "#e23b3b" },
-    { "id": "yellow","name": "イエロー", "hex": "#f4c430" }
+    { "id": "blue",     "name": "ブルー",       "hex": "#0C48A3" },
+    { "id": "white",    "name": "ホワイト",     "hex": "#FFFFFF" },
+    { "id": "warmgray", "name": "ウォームグレー", "hex": "#B1A29A" }
   ],
   "pins": [
     {
@@ -113,13 +113,13 @@ interface Project {
     },
     {
       "id": "p2",
-      "colorId": "red",
-      "connection": { "parentId": "p1", "gripIndex": 3, "roll": 90, "flip": false }
+      "colorId": "white",
+      "connection": { "parentId": "p1", "gripIndex": 3, "roll": 90 }
     },
     {
       "id": "p3",
-      "colorId": "yellow",
-      "connection": { "parentId": "p1", "gripIndex": 5, "roll": 0, "flip": true }
+      "colorId": "warmgray",
+      "connection": { "parentId": "p1", "gripIndex": 4, "roll": 30, "pitch": 60 }
     }
   ]
 }
@@ -134,7 +134,8 @@ interface Project {
 - 同一 `(parentId, gripIndex)` の重複（ソケット二重占有）がない。
 - ルートピン（`connection: null`）は `transform` を持つ。
 - `colorId` が `palette` に存在する（無ければ既定色にフォールバック）。
-- `gripIndex` が有効範囲内（`0 … N-1`）。
+- `gripIndex` が有効範囲内（`0 … 6`）。
+- `roll` / `pitch` がソケット種別の許容範囲・刻み（30°）に収まる（[02 §5.1](02-clothespin-spec.md)）。`pitch` は丸線リング（`g4`/`g6`）のみ有効。
 
 ### 2.3 バージョニング
 
@@ -162,9 +163,9 @@ interface Project {
 
 ```csv
 color_id,color_name,hex,count
-blue,ブルー,#1f6fe0,128
-red,レッド,#e23b3b,64
-yellow,イエロー,#f4c430,32
+blue,ブルー,#0C48A3,128
+white,ホワイト,#FFFFFF,64
+warmgray,ウォームグレー,#B1A29A,32
 TOTAL,,,224
 ```
 
