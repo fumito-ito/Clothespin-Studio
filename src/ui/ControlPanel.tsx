@@ -1,18 +1,10 @@
-// 左上のオーバーレイパネル（M1: 表示確認用の最小 UI）
+// 左上のオーバーレイパネル。配置・色・選択中ピンの操作（M2）。
 
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { DEFAULT_PALETTE } from '../assets/palette'
-
-interface Props {
-  colorId: string
-  onColorChange: (id: string) => void
-  showSockets: boolean
-  onShowSockets: (v: boolean) => void
-  showBounds: boolean
-  onShowBounds: (v: boolean) => void
-  showAxes: boolean
-  onShowAxes: (v: boolean) => void
-}
+import { allowedAngles, socketByIndex } from '../domain/clothespin'
+import { redo, undo, useStudio } from '../state/store'
+import { confirmAndDelete } from './actions'
 
 const panelStyle: CSSProperties = {
   position: 'absolute',
@@ -25,20 +17,68 @@ const panelStyle: CSSProperties = {
   backdropFilter: 'blur(6px)',
   fontSize: 13,
   lineHeight: 1.8,
-  minWidth: 200,
+  width: 230,
 }
 
-export function ControlPanel(props: Props) {
+const buttonStyle: CSSProperties = {
+  background: '#262b34',
+  color: 'var(--color-text)',
+  border: '1px solid var(--color-border)',
+  borderRadius: 6,
+  padding: '4px 10px',
+  cursor: 'pointer',
+  fontSize: 12,
+}
+
+function Btn({
+  onClick,
+  active,
+  disabled,
+  children,
+}: {
+  onClick: () => void
+  active?: boolean
+  disabled?: boolean
+  children: ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        ...buttonStyle,
+        ...(active ? { borderColor: 'var(--color-accent)', color: 'var(--color-accent)' } : {}),
+        ...(disabled ? { opacity: 0.4, cursor: 'default' } : {}),
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+export function ControlPanel() {
+  const pins = useStudio((s) => s.pins)
+  const selectedPinId = useStudio((s) => s.selectedPinId)
+  const activeColorId = useStudio((s) => s.activeColorId)
+  const placementMode = useStudio((s) => s.placementMode)
+  const setPlacementMode = useStudio((s) => s.setPlacementMode)
+  const setActiveColor = useStudio((s) => s.setActiveColor)
+  const stepRoll = useStudio((s) => s.stepRoll)
+  const stepPitch = useStudio((s) => s.stepPitch)
+
+  const selected = pins.find((p) => p.id === selectedPinId)
+  const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
+
   return (
     <div style={panelStyle}>
       <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Clothespin Studio 🧷</div>
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
         {DEFAULT_PALETTE.map((c) => (
           <button
             key={c.id}
             title={c.name}
-            onClick={() => props.onColorChange(c.id)}
+            onClick={() => setActiveColor(c.id)}
             style={{
               width: 26,
               height: 26,
@@ -46,43 +86,92 @@ export function ControlPanel(props: Props) {
               cursor: 'pointer',
               background: c.hex,
               border:
-                c.id === props.colorId
+                c.id === activeColorId
                   ? '2px solid var(--color-accent)'
                   : '1px solid var(--color-border)',
             }}
           />
         ))}
+        <span style={{ color: 'var(--color-text-dim)', fontSize: 11, marginLeft: 4 }}>
+          {pins.length} ピン
+        </span>
       </div>
 
-      <label style={{ display: 'block', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={props.showSockets}
-          onChange={(e) => props.onShowSockets(e.target.checked)}
-        />{' '}
-        接続点（GRIP / JAW）
-      </label>
-      <label style={{ display: 'block', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={props.showBounds}
-          onChange={(e) => props.onShowBounds(e.target.checked)}
-        />{' '}
-        寸法ボックス（60×12×39mm）
-      </label>
-      <label style={{ display: 'block', cursor: 'pointer' }}>
-        <input
-          type="checkbox"
-          checked={props.showAxes}
-          onChange={(e) => props.onShowAxes(e.target.checked)}
-        />{' '}
-        ドメイン軸（X赤 Y緑 Z青）
-      </label>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        <Btn onClick={() => setPlacementMode(!placementMode)} active={placementMode}>
+          {placementMode ? '配置をキャンセル (Esc)' : '🧷 ルートピンを配置'}
+        </Btn>
+      </div>
+      {placementMode && (
+        <div style={{ color: 'var(--color-accent)', fontSize: 12, marginBottom: 8 }}>
+          地面をクリックして配置（1cm スナップ）
+        </div>
+      )}
+
+      {selected && (
+        <div
+          style={{
+            borderTop: '1px solid var(--color-border)',
+            paddingTop: 8,
+            marginBottom: 4,
+          }}
+        >
+          <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
+            選択中: {selected.id}{' '}
+            {selected.connection
+              ? `（親 ${selected.connection.parentId} の ${socket?.id}）`
+              : '（ルート）'}
+          </div>
+
+          {selected.connection && socket && (
+            <>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ width: 38 }}>roll</span>
+                <Btn onClick={() => stepRoll(selected.id, -1)}>−30°</Btn>
+                <span style={{ width: 44, textAlign: 'center' }}>{selected.connection.roll}°</span>
+                <Btn onClick={() => stepRoll(selected.id, 1)}>+30°</Btn>
+              </div>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span style={{ width: 38 }}>pitch</span>
+                <Btn
+                  onClick={() => stepPitch(selected.id, -1)}
+                  disabled={socket.pitchMaxAbsDeg === null}
+                >
+                  −30°
+                </Btn>
+                <span style={{ width: 44, textAlign: 'center' }}>
+                  {socket.pitchMaxAbsDeg === null ? '—' : `${selected.connection.pitch ?? 0}°`}
+                </span>
+                <Btn
+                  onClick={() => stepPitch(selected.id, 1)}
+                  disabled={socket.pitchMaxAbsDeg === null}
+                >
+                  +30°
+                </Btn>
+              </div>
+              <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
+                roll 範囲 ±{Math.max(...allowedAngles(socket.rollMaxAbsDeg))}°
+                {socket.pitchMaxAbsDeg !== null && ` / pitch 範囲 ±${socket.pitchMaxAbsDeg}°`}
+              </div>
+            </>
+          )}
+
+          <div style={{ marginTop: 6 }}>
+            <Btn onClick={() => confirmAndDelete(selected.id)}>削除 (Del)</Btn>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+        <Btn onClick={undo}>↩ Undo</Btn>
+        <Btn onClick={redo}>↪ Redo</Btn>
+      </div>
 
       <div style={{ color: 'var(--color-text-dim)', fontSize: 11, marginTop: 8 }}>
-        ドラッグ: 回転 / 右ドラッグ: パン / ホイール: ズーム
+        ピンをクリック = 選択 / ソケット球クリック = 連結
+        <br />[ ] = roll / {'{ }'} = pitch / Del = 削除 / ⌘Z = Undo
         <br />
-        グリッド 1 マス = 1cm
+        ドラッグ: 回転 / 右ドラッグ: パン / ホイール: ズーム
       </div>
     </div>
   )

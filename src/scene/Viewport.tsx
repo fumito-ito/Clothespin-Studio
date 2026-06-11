@@ -5,20 +5,18 @@
 
 import { Canvas } from '@react-three/fiber'
 import { ContactShadows, Grid, OrbitControls } from '@react-three/drei'
-import { DIMENSIONS } from '../domain/clothespin'
-import { ClothespinModel } from './ClothespinModel'
-import { SocketMarkers } from './SocketMarkers'
+import { useStudio } from '../state/store'
+import { Pins } from './Pins'
+import { GroundPlane } from './GroundPlane'
 
-interface Props {
-  colorHex: string
-  showSockets: boolean
-  showBounds: boolean
-  showAxes: boolean
-}
+export function Viewport() {
+  const selectPin = useStudio((s) => s.selectPin)
 
-export function Viewport({ colorHex, showSockets, showBounds, showAxes }: Props) {
   return (
-    <Canvas camera={{ position: [70, 60, 95], fov: 40, near: 1, far: 5000 }}>
+    <Canvas
+      camera={{ position: [110, 90, 150], fov: 40, near: 1, far: 5000 }}
+      onPointerMissed={() => selectPin(null)}
+    >
       <color attach="background" args={['#1a1d23']} />
       <ambientLight intensity={0.6} />
       <directionalLight position={[80, 120, 60]} intensity={1.4} />
@@ -31,29 +29,18 @@ export function Viewport({ colorHex, showSockets, showBounds, showAxes }: Props)
         sectionSize={100}
         cellColor="#3a3f4b"
         sectionColor="#5b6273"
-        fadeDistance={600}
+        fadeDistance={800}
         followCamera={false}
       />
-      <ContactShadows position={[0, 0.1, 0]} opacity={0.35} scale={250} blur={2.2} far={60} />
+      <ContactShadows position={[0, 0.1, 0]} opacity={0.35} scale={400} blur={2.2} far={80} />
 
       {/* ドメイン座標系 (Z-up) */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        {/* ピンを地面に載せる（原点 = スプリング中心なので高さの半分持ち上げる） */}
-        <group position={[0, 0, DIMENSIONS.height / 2]}>
-          <ClothespinModel colorHex={colorHex} />
-          {showSockets && <SocketMarkers />}
-          {showBounds && (
-            <mesh>
-              <boxGeometry args={[DIMENSIONS.length, DIMENSIONS.thickness, DIMENSIONS.height]} />
-              <meshBasicMaterial color="#4a8fe7" wireframe transparent opacity={0.6} />
-            </mesh>
-          )}
-        </group>
-        {/* ドメイン軸: X=赤(鼻先) Y=緑(厚み) Z=青(高さ) */}
-        {showAxes && <axesHelper args={[30]} />}
+        <Pins />
+        <GroundPlane />
       </group>
 
-      <OrbitControls makeDefault target={[0, DIMENSIONS.height / 2, 0]} />
+      <OrbitControls makeDefault target={[0, 25, 0]} />
     </Canvas>
   )
 }

@@ -8,10 +8,20 @@ import { SPRING_COLOR } from '../assets/palette'
 
 interface Props {
   colorHex: string
+  /** 選択ハイライト（発光） */
+  selected?: boolean
 }
 
 /** X-Z 平面内のセグメントを box で描く。長軸 = X、回転は Y 軸まわり */
-function SegmentBox({ seg, colorHex }: { seg: BodySegment; colorHex: string }) {
+function SegmentBox({
+  seg,
+  colorHex,
+  selected,
+}: {
+  seg: BodySegment
+  colorHex: string
+  selected: boolean
+}) {
   const dx = seg.to.x - seg.from.x
   const dz = seg.to.z - seg.from.z
   const length = Math.hypot(dx, dz)
@@ -22,16 +32,21 @@ function SegmentBox({ seg, colorHex }: { seg: BodySegment; colorHex: string }) {
   return (
     <mesh position={[cx, 0, cz]} rotation={[0, rotY, 0]}>
       <boxGeometry args={[length, BODY.width, seg.thickness]} />
-      <meshStandardMaterial color={colorHex} roughness={0.55} />
+      <meshStandardMaterial
+        color={colorHex}
+        roughness={0.55}
+        emissive="#4a8fe7"
+        emissiveIntensity={selected ? 0.35 : 0}
+      />
     </mesh>
   )
 }
 
-export function ClothespinModel({ colorHex }: Props) {
+export function ClothespinModel({ colorHex, selected = false }: Props) {
   return (
     <group>
       {BODY_SEGMENTS.map((seg, i) => (
-        <SegmentBox key={i} seg={seg} colorHex={colorHex} />
+        <SegmentBox key={i} seg={seg} colorHex={colorHex} selected={selected} />
       ))}
       {/* 金属スプリングリング（コイル軸 = Y）。torus 既定は XY 平面なので X 軸 90° 回転 */}
       <mesh rotation={[Math.PI / 2, 0, 0]}>

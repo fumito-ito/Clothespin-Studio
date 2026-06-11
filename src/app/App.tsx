@@ -1,34 +1,54 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import { Viewport } from '../scene/Viewport'
 import { ControlPanel } from '../ui/ControlPanel'
-import { DEFAULT_COLOR_ID, DEFAULT_PALETTE } from '../assets/palette'
+import { confirmAndDelete } from '../ui/actions'
+import { redo, undo, useStudio } from '../state/store'
 
 export default function App() {
-  const [colorId, setColorId] = useState<string>(DEFAULT_COLOR_ID)
-  const [showSockets, setShowSockets] = useState(true)
-  const [showBounds, setShowBounds] = useState(false)
-  const [showAxes, setShowAxes] = useState(false)
+  // キーボードショートカット（NFR-8）
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const { selectedPinId, placementMode, selectPin, setPlacementMode, stepRoll, stepPitch } =
+        useStudio.getState()
 
-  const colorHex = DEFAULT_PALETTE.find((c) => c.id === colorId)?.hex ?? '#0C48A3'
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) redo()
+        else undo()
+        return
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          if (placementMode) setPlacementMode(false)
+          else selectPin(null)
+          break
+        case '[':
+          if (selectedPinId) stepRoll(selectedPinId, -1)
+          break
+        case ']':
+          if (selectedPinId) stepRoll(selectedPinId, 1)
+          break
+        case '{':
+          if (selectedPinId) stepPitch(selectedPinId, -1)
+          break
+        case '}':
+          if (selectedPinId) stepPitch(selectedPinId, 1)
+          break
+        case 'Delete':
+        case 'Backspace':
+          if (selectedPinId) confirmAndDelete(selectedPinId)
+          break
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Viewport
-        colorHex={colorHex}
-        showSockets={showSockets}
-        showBounds={showBounds}
-        showAxes={showAxes}
-      />
-      <ControlPanel
-        colorId={colorId}
-        onColorChange={setColorId}
-        showSockets={showSockets}
-        onShowSockets={setShowSockets}
-        showBounds={showBounds}
-        onShowBounds={setShowBounds}
-        showAxes={showAxes}
-        onShowAxes={setShowAxes}
-      />
+      <Viewport />
+      <ControlPanel />
     </div>
   )
 }
