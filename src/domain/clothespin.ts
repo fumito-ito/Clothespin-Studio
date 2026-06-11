@@ -81,11 +81,15 @@ export type SocketKind = 'flat-tip' | 'ring-wire'
 
 /**
  * 接続点のローカルフレーム。normal ⊥ tangent（いずれも単位ベクトル）。
- * - normal: 子の閉じ軸（squeeze）。相手 JAW の閉じ軸（±Z）がこの軸に揃う。
- *   平先端 = 先端面の法線 / リング = 接続点での局所ワイヤ方向（アーチを面内で跨いで挟む）。
- * - tangent: = normal × outward。既定姿勢の同一平面性から、全ソケットで ±Y（コイル軸/幅方向）になる。
+ * - normal: 子の閉じ軸（squeeze）= roll の回転軸。相手 JAW の閉じ軸（±Z）がこの軸に揃う。
+ *   平先端 = 先端面の法線（面上のプロペラ回転）
+ *   リング = コイル軸 ±Y（コイル軸まわり = ピン平面に平行な面内回転）
+ * - tangent: = normal × outward = pitch の回転軸。
+ *   平先端 = ±Y（幅方向）→ 子は親と同一平面（先端タブが子の口幅に収まる）
+ *   リング = 接続点での局所ワイヤ方向 → 子の幅（Y）がワイヤに沿う = 子は親と直交し、
+ *   双方の金属スプリングは「ねじれの位置」になる（ユーザーFB反映・物理的に正しい噛み方）
  * - outward（定義素・非保持）: 基準姿勢（roll=pitch=0）で子ピンの本体が伸びる向き。
- *   すべて親の X-Z 面内 = 子は親と同一平面に置かれるのが既定（ユーザーFB反映）。
+ *   すべて親の X-Z 面内（部材の延長 / 真上 / 真後ろ / 真下）。
  */
 export interface ConnectorFrame {
   position: Vec3
@@ -98,13 +102,6 @@ export interface GripSocket extends ConnectorFrame {
   index: number
   id: 'g0' | 'g1' | 'g2' | 'g3' | 'g4' | 'g5' | 'g6'
   kind: SocketKind
-  /**
-   * ユーザー操作 roll の回転軸。
-   * - flat-tip: 'normal'（先端面の法線まわり = 面上のプロペラ回転）
-   * - ring-wire: 'tangent'（コイル軸まわり = ピン平面に平行な面内回転）
-   * pitch は常にもう一方の軸まわり（リングのワイヤまわりの首振り）。
-   */
-  rollAxis: 'normal' | 'tangent'
   /** roll の物理範囲（±度）。離散有効値は allowedAngles() で導出。0 = roll 不可 */
   rollMaxAbsDeg: number
   /** pitch の物理範囲（±度）。null = pitch なし（1 自由度） */
@@ -126,10 +123,11 @@ function perpUp(dir: Vec3): Vec3 {
   return dx >= 0 ? [-dz, 0, dx] : [dz, 0, -dx]
 }
 
+// 成分の +0 は −0 の正規化
 const cross = (a: Vec3, b: Vec3): Vec3 => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
+  a[1] * b[2] - a[2] * b[1] + 0,
+  a[2] * b[0] - a[0] * b[2] + 0,
+  a[0] * b[1] - a[1] * b[0] + 0,
 ]
 
 /**
@@ -152,7 +150,7 @@ const PITCH_RING = 90 // リング系: ワイヤまわりの首振り
 
 const mirrorZ = (v: Vec3): Vec3 => [v[0], v[1], -v[2]]
 
-/** GRIP ソケット 7 点（メス）。docs/02 §4.2 の正準順。既定姿勢はすべて親と同一平面 */
+/** GRIP ソケット 7 点（メス）。docs/02 §4.2 の正準順。既定姿勢: 平先端 = 同一平面 / リング = 直交 */
 export const GRIP_SOCKETS: readonly GripSocket[] = [
   {
     index: 0,
@@ -160,7 +158,6 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
     kind: 'flat-tip',
     // 上ハンドル先端: 既定 = ハンドルの延長方向に伸びる
     ...gripFrame([BODY.handleTip.x, 0, BODY.handleTip.z], perpUp(upperHandleDir), upperHandleDir),
-    rollAxis: 'normal',
     rollMaxAbsDeg: ROLL_FLAT,
     pitchMaxAbsDeg: null,
   },
@@ -173,7 +170,6 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
       mirrorZ(perpUp(upperHandleDir)),
       mirrorZ(upperHandleDir),
     ),
-    rollAxis: 'normal',
     rollMaxAbsDeg: ROLL_FLAT,
     pitchMaxAbsDeg: null,
   },
@@ -183,7 +179,6 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
     kind: 'flat-tip',
     // 上ジョー先端: 既定 = ジョーの延長方向（ほぼ +X）に伸びる
     ...gripFrame([BODY.jawTip.x, 0, BODY.jawTip.z], perpUp(upperJawDir), upperJawDir),
-    rollAxis: 'normal',
     rollMaxAbsDeg: ROLL_FLAT,
     pitchMaxAbsDeg: null,
   },
@@ -196,7 +191,6 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
       mirrorZ(perpUp(upperJawDir)),
       mirrorZ(upperJawDir),
     ),
-    rollAxis: 'normal',
     rollMaxAbsDeg: ROLL_FLAT,
     pitchMaxAbsDeg: null,
   },
@@ -204,10 +198,10 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
     index: 4,
     id: 'g4',
     kind: 'ring-wire',
-    // リング上: 既定 = 真上に立つ（同一平面）。normal = ワイヤ方向(−X)
-    // roll = コイル軸(tangent)まわりの面内傾き / pitch = ワイヤまわりの首振り
-    ...gripFrame([0, 0, SPRING.radius], [-1, 0, 0], [0, 0, 1]),
-    rollAxis: 'tangent',
+    // リング上: 既定 = 真上に立つ。normal = コイル軸(+Y) → tangent = ワイヤ方向(+X)。
+    // 子の幅(Y)がワイヤに沿う = 子は親と直交（スプリング同士はねじれの位置）。
+    // roll = コイル軸まわりの面内傾き / pitch = ワイヤまわりの首振り
+    ...gripFrame([0, 0, SPRING.radius], [0, 1, 0], [0, 0, 1]),
     rollMaxAbsDeg: ROLL_RING,
     pitchMaxAbsDeg: PITCH_RING,
   },
@@ -215,10 +209,9 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
     index: 5,
     id: 'g5',
     kind: 'ring-wire',
-    // リング後ろ（ハンドル側）: 既定 = 真後ろに伸びる（同一平面）。normal = ワイヤ方向(−Z)
+    // リング後ろ（ハンドル側）: 既定 = 真後ろに伸びる（親と直交）。tangent = ワイヤ方向(+Z)。
     // pitch のみ（面内回転は親ハンドルと干渉するため roll 不可）
-    ...gripFrame([-SPRING.radius, 0, 0], [0, 0, -1], [-1, 0, 0]),
-    rollAxis: 'tangent',
+    ...gripFrame([-SPRING.radius, 0, 0], [0, 1, 0], [-1, 0, 0]),
     rollMaxAbsDeg: ROLL_NONE,
     pitchMaxAbsDeg: PITCH_RING,
   },
@@ -226,9 +219,8 @@ export const GRIP_SOCKETS: readonly GripSocket[] = [
     index: 6,
     id: 'g6',
     kind: 'ring-wire',
-    // リング下: 既定 = 真下に伸びる（同一平面）。normal = ワイヤ方向(+X)
-    ...gripFrame([0, 0, -SPRING.radius], [1, 0, 0], [0, 0, -1]),
-    rollAxis: 'tangent',
+    // リング下: 既定 = 真下に伸びる（親と直交）。tangent = ワイヤ方向(−X)
+    ...gripFrame([0, 0, -SPRING.radius], [0, 1, 0], [0, 0, -1]),
     rollMaxAbsDeg: ROLL_RING,
     pitchMaxAbsDeg: PITCH_RING,
   },

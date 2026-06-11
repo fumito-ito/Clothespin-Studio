@@ -43,21 +43,17 @@ describe('GRIP_SOCKETS', () => {
     }
   })
 
-  it('roll の回転軸: 平先端 = normal / リング = tangent（コイル軸 = 面内回転）', () => {
-    for (const s of GRIP_SOCKETS) {
-      expect(s.rollAxis).toBe(s.kind === 'flat-tip' ? 'normal' : 'tangent')
-    }
-  })
-
-  it('全ソケットの tangent は ±Y（既定姿勢で子が親と同一平面に乗る）', () => {
-    for (const s of GRIP_SOCKETS) {
+  it('平先端の tangent は ±Y（子は親と同一平面に乗る）', () => {
+    for (const s of GRIP_SOCKETS.filter((s) => s.kind === 'flat-tip')) {
       expect(Math.abs(s.tangent[1])).toBeCloseTo(1, 10)
     }
   })
 
-  it('リング系の normal は接続点でのワイヤ方向（X-Z 面内）', () => {
+  it('リング系: normal = コイル軸(+Y) / tangent = ワイヤ方向（X-Z 面内）', () => {
+    // 子の幅(Y)がワイヤに沿う = 子は親と直交 = スプリング同士はねじれの位置
     for (const s of GRIP_SOCKETS.filter((s) => s.kind === 'ring-wire')) {
-      expect(s.normal[1]).toBe(0)
+      expect(s.normal).toEqual([0, 1, 0])
+      expect(s.tangent[1]).toBe(0)
     }
   })
 

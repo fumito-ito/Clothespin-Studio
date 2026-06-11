@@ -39,7 +39,7 @@ describe('childWorldMatrix', () => {
   })
 
   it('既定姿勢 (roll=pitch=0): 子の本体は outward = tangent × normal 方向に伸びる', () => {
-    // ユーザー指定の既定位置: 子は親と同一平面で部材の延長/真上/真後ろ/真下に伸びる
+    // ユーザー指定の既定位置: 部材の延長 / 真上 / 真後ろ / 真下
     for (const socket of GRIP_SOCKETS) {
       const m = childWorldMatrix(IDENTITY, socket, 0, 0)
       const body = xformDir(m, [-1, 0, 0]) // 子の本体方向（鼻先 → ハンドル）
@@ -51,9 +51,15 @@ describe('childWorldMatrix', () => {
         t[0] * n[1] - t[1] * n[0],
       ]
       expectVec(body, outward)
-      // 同一平面: 子の幅方向（Y）は親の X-Z 平面の法線 ±Y に一致する
+      // 子の幅方向（Y）= コイル軸の向き:
+      //   平先端 → 親の ±Y（同一平面） / リング → ワイヤ方向 = 親の X-Z 面内
+      //   （= リングではスプリング同士がねじれの位置になる。ユーザーFB反映）
       const width = xformDir(m, [0, 1, 0])
-      expect(Math.abs(width.y)).toBeCloseTo(1, 10)
+      if (socket.kind === 'flat-tip') {
+        expect(Math.abs(width.y)).toBeCloseTo(1, 10)
+      } else {
+        expect(Math.abs(width.y)).toBeCloseTo(0, 10)
+      }
     }
   })
 
@@ -61,8 +67,8 @@ describe('childWorldMatrix', () => {
     const m = childWorldMatrix(IDENTITY, g4, 90, 0)
     const body = xformDir(m, [-1, 0, 0])
     expectVec(body, [1, 0, 0]) // 面内（X-Z）に留まり、ノーズ側へ 90° 傾く
-    // 幅方向はコイル軸 ±Y のまま（同一平面を維持）
-    expect(Math.abs(xformDir(m, [0, 1, 0]).y)).toBeCloseTo(1, 10)
+    // 子の幅（コイル軸）は親の X-Z 面内のまま（ねじれの位置を維持）
+    expect(Math.abs(xformDir(m, [0, 1, 0]).y)).toBeCloseTo(0, 10)
     // 位置は不変
     expectVec(new Vector3(...JAW.position).applyMatrix4(m), [...g4.position])
   })
@@ -70,7 +76,7 @@ describe('childWorldMatrix', () => {
   it('pitch=90 (g4): ワイヤまわりの首振り — 子の本体が面外（±Y）へ倒れる', () => {
     const m = childWorldMatrix(IDENTITY, g4, 0, 90)
     const body = xformDir(m, [-1, 0, 0])
-    expectVec(body, [0, 1, 0])
+    expectVec(body, [0, -1, 0])
     // 位置は不変（接点固定）
     expectVec(new Vector3(...JAW.position).applyMatrix4(m), [...g4.position])
   })

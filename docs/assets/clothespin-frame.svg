@@ -68,5 +68,5 @@
 
   <circle cx="70" cy="430" r="6" fill="#ef6c4d" stroke="#b91c1c" stroke-width="1.2"/>
   <text x="86" y="434" font-size="12" fill="#334155">JAW（オス）：相手を挟む側・1ピンに1つ</text>
-  <text x="70" y="460" font-size="12" fill="#64748b">30° 刻み・各 ±90°。既定姿勢＝親と同一平面・部材延長。roll（リング）＝面内回転 / pitch＝ワイヤまわり首振り。</text>
+  <text x="70" y="460" font-size="12" fill="#64748b">30° 刻み・各 ±90°。既定＝部材延長方向。平先端＝同一平面 / リング＝子がワイヤに直交（スプリングはねじれの位置）。</text>
 </svg>
