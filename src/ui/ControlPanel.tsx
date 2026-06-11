@@ -127,9 +127,18 @@ export function ControlPanel() {
             <>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ width: 38 }}>roll</span>
-                <Btn onClick={() => stepRoll(selected.id, -1)}>−30°</Btn>
-                <span style={{ width: 44, textAlign: 'center' }}>{selected.connection.roll}°</span>
-                <Btn onClick={() => stepRoll(selected.id, 1)}>+30°</Btn>
+                <Btn
+                  onClick={() => stepRoll(selected.id, -1)}
+                  disabled={socket.rollMaxAbsDeg === 0}
+                >
+                  −30°
+                </Btn>
+                <span style={{ width: 44, textAlign: 'center' }}>
+                  {socket.rollMaxAbsDeg === 0 ? '—' : `${selected.connection.roll}°`}
+                </span>
+                <Btn onClick={() => stepRoll(selected.id, 1)} disabled={socket.rollMaxAbsDeg === 0}>
+                  +30°
+                </Btn>
               </div>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 <span style={{ width: 38 }}>pitch</span>
@@ -150,7 +159,9 @@ export function ControlPanel() {
                 </Btn>
               </div>
               <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
-                roll 範囲 ±{Math.max(...allowedAngles(socket.rollMaxAbsDeg))}°
+                {socket.rollMaxAbsDeg > 0
+                  ? `roll 範囲 ±${Math.max(...allowedAngles(socket.rollMaxAbsDeg))}°`
+                  : 'roll 不可'}
                 {socket.pitchMaxAbsDeg !== null && ` / pitch 範囲 ±${socket.pitchMaxAbsDeg}°`}
               </div>
             </>

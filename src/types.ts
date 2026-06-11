@@ -12,9 +12,9 @@ export interface Connection {
   parentId: string
   /** 親の GRIP ソケット番号 (g0=0 … g6=6) */
   gripIndex: number
-  /** 度。30° 刻み。許容範囲はソケット種別で異なる（docs/02 §5.1） */
+  /** 度。30° 刻み。許容範囲はソケット種別で異なる（docs/02 §5.1。g5 は 0 固定） */
   roll: number
-  /** 度。30° 刻み。丸線リング (g4/g6) のみ有効。省略時は 0 */
+  /** 度。30° 刻み。リング系 (g4/g5/g6) のみ有効。省略時は 0 */
   pitch?: number
 }
 

@@ -1,16 +1,18 @@
 // 連結 → ワールド姿勢の導出。docs/02 §5 の式を実装する:
-//   T_child = T_parent · S(g_i) · R_normal(roll) · R_tangent(pitch) · FLIP · J⁻¹
+//   T_child = T_parent · S(g_i) · R_z(θn) · R_x(θt) · FLIP · J⁻¹
 //
 // コネクタフレームの軸対応: x = tangent / y = normal×tangent / z = normal。
+// θn（normal まわり）/ θt（tangent まわり）への roll/pitch の割り当ては
+// ソケットの rollAxis に従う（平先端: roll=θn / リング: roll=θt, pitch=θn）。
 // FLIP = R_x(180°): JAW の normal をソケット normal の逆向きに合わせる
-// （roll=0 で JAW.tangent とソケット tangent が一致する）。
+// （roll=pitch=0 で子は outward = tangent×normal 方向に伸びる既定姿勢になる）。
 //
 // three/math のみに依存（描画非依存・ユニットテスト可能, docs/04 §2）。
 
 import { Matrix4, Quaternion, Vector3 } from 'three'
 import type { Pin } from '../types'
 import { JAW, socketByIndex } from './clothespin'
-import type { ConnectorFrame } from './clothespin'
+import type { ConnectorFrame, GripSocket } from './clothespin'
 
 const DEG2RAD = Math.PI / 180
 
@@ -28,13 +30,16 @@ const JAW_INV = frameMatrix(JAW).invert()
 /** 親のワールド行列と接続パラメータから子のワールド行列を導出 */
 export function childWorldMatrix(
   parentWorld: Matrix4,
-  socket: ConnectorFrame,
+  socket: GripSocket,
   rollDeg: number,
   pitchDeg: number,
 ): Matrix4 {
+  // rollAxis に応じて roll/pitch を normal 軸 / tangent 軸に割り当てる
+  const aboutNormal = socket.rollAxis === 'normal' ? rollDeg : pitchDeg
+  const aboutTangent = socket.rollAxis === 'normal' ? pitchDeg : rollDeg
   const m = new Matrix4().multiplyMatrices(parentWorld, frameMatrix(socket))
-  m.multiply(new Matrix4().makeRotationZ(rollDeg * DEG2RAD)) // R_normal(roll)
-  m.multiply(new Matrix4().makeRotationX(pitchDeg * DEG2RAD)) // R_tangent(pitch)
+  m.multiply(new Matrix4().makeRotationZ(aboutNormal * DEG2RAD)) // normal(z) まわり
+  m.multiply(new Matrix4().makeRotationX(aboutTangent * DEG2RAD)) // tangent(x) まわり
   m.multiply(FLIP)
   m.multiply(JAW_INV)
   return m

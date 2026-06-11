@@ -60,7 +60,14 @@ describe('wouldCreateCycle', () => {
 
 describe('validatePins', () => {
   it('正常なフォレストはエラーなし', () => {
-    expect(validatePins([root, pin('a', 'root', 0, 90), pin('b', 'a', 4, 30, 60)])).toEqual([])
+    expect(
+      validatePins([
+        root,
+        pin('a', 'root', 0, 90),
+        pin('b', 'a', 4, 30, 60),
+        pin('c', 'a', 5, 0, 60), // g5 は pitch のみ可
+      ]),
+    ).toEqual([])
   })
 
   it('違反を検出する', () => {
@@ -70,9 +77,10 @@ describe('validatePins', () => {
       [[root, pin('a', 'root', 0), pin('b', 'root', 0)], '二重占有'],
       [[{ ...root, transform: undefined }], 'transform がない'],
       [[root, pin('a', 'root', 0, 45)], '許容値でない'], // 30° グリッド外
-      [[root, pin('a', 'root', 0, 135)], '許容値でない'], // ±135 はグリッド外（実効 ±120）
-      [[root, pin('a', 'root', 0, 0, 30)], 'pitch を持たない'], // g0 は 1 自由度
+      [[root, pin('a', 'root', 0, 120)], '許容値でない'], // 平先端の roll は ±90 まで
+      [[root, pin('a', 'root', 0, 0, 30)], 'pitch を持たない'], // g0 は pitch なし
       [[root, pin('a', 'root', 4, 0, 120)], '許容値でない'], // pitch ±90 超過
+      [[root, pin('a', 'root', 5, 30)], '許容値でない'], // g5 は roll 不可（pitch のみ）
       [[pin('a', 'b', 0), pin('b', 'a', 1)], '閉路'],
     ]
     for (const [pins, fragment] of cases) {

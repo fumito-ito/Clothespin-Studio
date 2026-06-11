@@ -1,6 +1,6 @@
 // 選択中ピンの GRIP ソケットマーカー（ピンのローカル座標系内に描画）。
 // クリックで新規ピンをスナップ連結する（FR-P3）。占有済みソケットはグレー表示・無効。
-// 色分け: アンバー = roll のみ（1自由度）/ ティール = roll+pitch（2自由度）
+// 色分け: アンバー = 1自由度（g0–g3: roll / g5: pitch）/ ティール = 2自由度（g4,g6）
 
 import { useState } from 'react'
 import { Html } from '@react-three/drei'
@@ -30,11 +30,8 @@ function Marker({
   const connectPin = useStudio((s) => s.connectPin)
   const [hovered, setHovered] = useState(false)
 
-  const color = isOccupied
-    ? COLOR_OCCUPIED
-    : socket.pitchMaxAbsDeg !== null
-      ? COLOR_2DOF
-      : COLOR_1DOF
+  const dof = (socket.rollMaxAbsDeg > 0 ? 1 : 0) + (socket.pitchMaxAbsDeg !== null ? 1 : 0)
+  const color = isOccupied ? COLOR_OCCUPIED : dof === 2 ? COLOR_2DOF : COLOR_1DOF
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()

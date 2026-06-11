@@ -5,7 +5,7 @@ import { GRIP_SOCKETS, JAW } from './clothespin'
 import type { Pin } from '../types'
 
 const IDENTITY = new Matrix4()
-const g4 = GRIP_SOCKETS[4] // リング頂点: pos(0,0,10) n(0,0,1) t(1,0,0)
+const g4 = GRIP_SOCKETS[4] // リング頂点: pos(0,0,10) n(0,1,0)=コイル軸 t(1,0,0)=outward(+Z)との外積
 
 /** 方向ベクトルを行列の回転成分で変換 */
 function xformDir(m: Matrix4, v: [number, number, number]): Vector3 {
@@ -38,20 +38,39 @@ describe('childWorldMatrix', () => {
     expectVec(xformDir(m, [...JAW.tangent]), [...g4.tangent])
   })
 
-  it('roll=90: JAW 接線が法線まわりに 90° 回る（tangent → binormal）', () => {
+  it('既定姿勢 (roll=pitch=0): 子の本体は outward = tangent × normal 方向に伸びる', () => {
+    // ユーザー指定の既定位置: 子は親と同一平面で部材の延長/真上/真後ろ/真下に伸びる
+    for (const socket of GRIP_SOCKETS) {
+      const m = childWorldMatrix(IDENTITY, socket, 0, 0)
+      const body = xformDir(m, [-1, 0, 0]) // 子の本体方向（鼻先 → ハンドル）
+      const t = socket.tangent
+      const n = socket.normal
+      const outward: [number, number, number] = [
+        t[1] * n[2] - t[2] * n[1],
+        t[2] * n[0] - t[0] * n[2],
+        t[0] * n[1] - t[1] * n[0],
+      ]
+      expectVec(body, outward)
+      // 同一平面: 子の幅方向（Y）は親の X-Z 平面の法線 ±Y に一致する
+      const width = xformDir(m, [0, 1, 0])
+      expect(Math.abs(width.y)).toBeCloseTo(1, 10)
+    }
+  })
+
+  it('roll=90 (g4): コイル軸まわりの面内回転 — 子の本体が +Z から +X へ倒れる', () => {
     const m = childWorldMatrix(IDENTITY, g4, 90, 0)
-    // g4: tangent(1,0,0) を normal(0,0,1) まわりに +90° → (0,1,0)
-    expectVec(xformDir(m, [...JAW.tangent]), [0, 1, 0])
+    const body = xformDir(m, [-1, 0, 0])
+    expectVec(body, [1, 0, 0]) // 面内（X-Z）に留まり、ノーズ側へ 90° 傾く
+    // 幅方向はコイル軸 ±Y のまま（同一平面を維持）
+    expect(Math.abs(xformDir(m, [0, 1, 0]).y)).toBeCloseTo(1, 10)
     // 位置は不変
     expectVec(new Vector3(...JAW.position).applyMatrix4(m), [...g4.position])
   })
 
-  it('pitch=90: 接続点まわりに接線軸で回る（法線の向きが変わる）', () => {
+  it('pitch=90 (g4): ワイヤまわりの首振り — 子の本体が面外（±Y）へ倒れる', () => {
     const m = childWorldMatrix(IDENTITY, g4, 0, 90)
-    // JAW 法線(噛み込み軸)は tangent(1,0,0) まわりに 90° 回転:
-    // roll=0 で (0,0,-1) だったものが → (0,1,0) 方向へ
-    const n = xformDir(m, [...JAW.normal])
-    expectVec(n, [0, 1, 0])
+    const body = xformDir(m, [-1, 0, 0])
+    expectVec(body, [0, 1, 0])
     // 位置は不変（接点固定）
     expectVec(new Vector3(...JAW.position).applyMatrix4(m), [...g4.position])
   })

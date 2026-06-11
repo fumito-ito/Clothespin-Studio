@@ -62,11 +62,11 @@
   </g>
 
   <circle cx="70" cy="404" r="6" fill="#f59e0b" stroke="#b45309" stroke-width="1.2"/>
-  <text x="86" y="408" font-size="12" fill="#334155">アンバー＝roll のみ（1自由度: g0–g3, g5）</text>
+  <text x="86" y="408" font-size="12" fill="#334155">アンバー＝1自由度（g0–g3: roll / g5: pitch）</text>
   <circle cx="380" cy="404" r="6" fill="#0d9488" stroke="#0f766e" stroke-width="1.2"/>
-  <text x="396" y="408" font-size="12" fill="#334155">ティール＝roll＋pitch（2自由度: g4, g6）</text>
+  <text x="396" y="408" font-size="12" fill="#334155">ティール＝2自由度 roll＋pitch（g4, g6）</text>
 
   <circle cx="70" cy="430" r="6" fill="#ef6c4d" stroke="#b91c1c" stroke-width="1.2"/>
   <text x="86" y="434" font-size="12" fill="#334155">JAW（オス）：相手を挟む側・1ピンに1つ</text>
-  <text x="70" y="460" font-size="12" fill="#64748b">回転は 30° 刻み。roll＝平先端 ±135°（離散値は ±120°）/ リング ±90°、pitch（g4,g6）±90°（暫定）。</text>
+  <text x="70" y="460" font-size="12" fill="#64748b">30° 刻み・各 ±90°。既定姿勢＝親と同一平面・部材延長。roll（リング）＝面内回転 / pitch＝ワイヤまわり首振り。</text>
 </svg>

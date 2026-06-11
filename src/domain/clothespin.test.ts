@@ -22,14 +22,42 @@ describe('GRIP_SOCKETS', () => {
     })
   })
 
-  it('pitch を持つのは g4 と g6 のみ', () => {
-    const withPitch = GRIP_SOCKETS.filter((s) => s.pitchMaxAbsDeg !== null).map((s) => s.id)
-    expect(withPitch).toEqual(['g4', 'g6'])
+  it('自由度: g0–g3 = roll のみ / g4,g6 = roll+pitch / g5 = pitch のみ', () => {
+    for (const s of GRIP_SOCKETS) {
+      const hasRoll = s.rollMaxAbsDeg > 0
+      const hasPitch = s.pitchMaxAbsDeg !== null
+      if (s.index <= 3) {
+        expect([hasRoll, hasPitch]).toEqual([true, false])
+      } else if (s.id === 'g5') {
+        expect([hasRoll, hasPitch]).toEqual([false, true])
+      } else {
+        expect([hasRoll, hasPitch]).toEqual([true, true])
+      }
+    }
   })
 
-  it('roll 物理範囲: 平先端 ±135° / 丸線リング ±90°', () => {
+  it('回転範囲: roll は ±90°（g5 は 0）/ pitch は ±90°', () => {
     for (const s of GRIP_SOCKETS) {
-      expect(s.rollMaxAbsDeg).toBe(s.kind === 'flat-tip' ? 135 : 90)
+      expect(s.rollMaxAbsDeg).toBe(s.id === 'g5' ? 0 : 90)
+      if (s.pitchMaxAbsDeg !== null) expect(s.pitchMaxAbsDeg).toBe(90)
+    }
+  })
+
+  it('roll の回転軸: 平先端 = normal / リング = tangent（コイル軸 = 面内回転）', () => {
+    for (const s of GRIP_SOCKETS) {
+      expect(s.rollAxis).toBe(s.kind === 'flat-tip' ? 'normal' : 'tangent')
+    }
+  })
+
+  it('全ソケットの tangent は ±Y（既定姿勢で子が親と同一平面に乗る）', () => {
+    for (const s of GRIP_SOCKETS) {
+      expect(Math.abs(s.tangent[1])).toBeCloseTo(1, 10)
+    }
+  })
+
+  it('リング系の normal は接続点でのワイヤ方向（X-Z 面内）', () => {
+    for (const s of GRIP_SOCKETS.filter((s) => s.kind === 'ring-wire')) {
+      expect(s.normal[1]).toBe(0)
     }
   })
 
@@ -59,25 +87,25 @@ describe('GRIP_SOCKETS', () => {
 })
 
 describe('allowedAngles / isAllowedAngle', () => {
-  it('±135°（平先端）→ 実効 −120…+120 の 9 値', () => {
-    const angles = allowedAngles(135)
-    expect(angles).toEqual([-120, -90, -60, -30, 0, 30, 60, 90, 120])
+  it('±90° → −90…+90 の 7 値', () => {
+    expect(allowedAngles(90)).toEqual([-90, -60, -30, 0, 30, 60, 90])
   })
 
-  it('±90°（丸線リング）→ 7 値', () => {
-    expect(allowedAngles(90)).toHaveLength(7)
-    expect(allowedAngles(90)).toContain(0)
-    expect(allowedAngles(90)).toContain(-90)
-    expect(allowedAngles(90)).toContain(90)
+  it('±0°（g5 の roll）→ 0 のみ', () => {
+    expect(allowedAngles(0)).toEqual([0])
+  })
+
+  it('グリッドに乗らない上限は切り捨てる（±135 → ±120）', () => {
+    expect(allowedAngles(135)).toEqual([-120, -90, -60, -30, 0, 30, 60, 90, 120])
   })
 
   it('isAllowedAngle: グリッド上かつ範囲内のみ true', () => {
-    expect(isAllowedAngle(120, 135)).toBe(true)
-    expect(isAllowedAngle(-120, 135)).toBe(true)
-    expect(isAllowedAngle(135, 135)).toBe(false) // 30° の倍数でない
-    expect(isAllowedAngle(150, 135)).toBe(false) // 範囲外
-    expect(isAllowedAngle(45, 135)).toBe(false) // グリッド外
-    expect(isAllowedAngle(0, 90)).toBe(true)
+    expect(isAllowedAngle(90, 90)).toBe(true)
+    expect(isAllowedAngle(-90, 90)).toBe(true)
+    expect(isAllowedAngle(120, 90)).toBe(false) // 範囲外
+    expect(isAllowedAngle(45, 90)).toBe(false) // グリッド外
+    expect(isAllowedAngle(30, 0)).toBe(false) // g5 roll は 0 のみ
+    expect(isAllowedAngle(0, 0)).toBe(true)
   })
 
   it('量子化ステップは 30°', () => {

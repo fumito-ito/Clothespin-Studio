@@ -45,8 +45,8 @@ interface Transform {
 interface Connection {
   parentId: string;   // 親ピンの id
   gripIndex: number;  // 親の GRIP ソケット番号 (g0=0, g1=1, ...)
-  roll: number;       // 度。30° 刻み。範囲はソケット種別で異なる（02 §5.1）
-  pitch?: number;     // 度。30° 刻み。丸線リング(g4/g6)のみ有効。省略時は 0
+  roll: number;       // 度。30° 刻み。範囲はソケット種別で異なる（02 §5.1。g5 は 0 固定）
+  pitch?: number;     // 度。30° 刻み。リング系(g4/g5/g6)のみ有効。省略時は 0
 }
 
 interface Pin {
@@ -136,7 +136,7 @@ interface Project {
   無視する（保存時は省略する。両方あっても `connection` を正とする）。
 - `colorId` が `palette` に存在する（無ければ既定色にフォールバック）。
 - `gripIndex` が有効範囲内（`0 … 6`）。
-- `roll` / `pitch` がソケット種別の許容範囲・刻み（30°）に収まる（[02 §5.1](02-clothespin-spec.md)）。`pitch` は丸線リング（`g4`/`g6`）のみ有効。
+- `roll` / `pitch` がソケット種別の許容範囲・刻み（30°）に収まる（[02 §5.1](02-clothespin-spec.md)）。`pitch` はリング系（`g4`/`g5`/`g6`）のみ有効。`g5` の `roll` は 0 のみ。
 
 ### 2.3 バージョニング
 
