@@ -11,4 +11,4 @@ export const DEFAULT_PALETTE: readonly PaletteColor[] = [
 export const DEFAULT_COLOR_ID = DEFAULT_PALETTE[0].id
 
 /** 金属スプリングの表示色（パレット外・固定） */
-export const SPRING_COLOR = '#9aa0a6'
+export const SPRING_COLOR = '#b9bdc2'
