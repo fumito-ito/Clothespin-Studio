@@ -4,10 +4,18 @@
 import { create } from 'zustand'
 import { temporal } from 'zundo'
 import { nanoid } from 'nanoid'
-import type { Pin, Vec3 } from '../types'
+import { Quaternion, Vector3 } from 'three'
+import type { Pin, Transform, Vec3 } from '../types'
 import { DIMENSIONS, allowedAngles, socketByIndex } from '../domain/clothespin'
 import { collectSubtree, occupiedSockets } from '../domain/graph'
+import { solveWorldTransforms } from '../domain/solve'
 import { DEFAULT_COLOR_ID } from '../assets/palette'
+
+/** ホバー中の GRIP ソケット（配置プレビュー用, FR-P8） */
+export interface SocketRef {
+  pinId: string
+  gripIndex: number
+}
 
 interface StudioState {
   // ドキュメント状態（履歴対象）
@@ -18,17 +26,33 @@ interface StudioState {
   activeColorId: string
   /** true = 地面クリックでルートピンを配置するモード */
   placementMode: boolean
+  hoverSocket: SocketRef | null
 
   // コマンド
   addRootPin: (position: Vec3) => void
   connectPin: (parentId: string, gripIndex: number) => void
   deleteSubtree: (pinId: string) => void
+  /** 親から切り離して自由ピン化する（現在のワールド姿勢を保持, FR-E3） */
+  detachPin: (pinId: string) => void
+  /** サブツリーを複製し、オフセットした自由ピンとして配置する（FR-E4） */
+  duplicateSubtree: (pinId: string) => void
   stepRoll: (pinId: string, dir: 1 | -1) => void
   stepPitch: (pinId: string, dir: 1 | -1) => void
   setPinColor: (pinId: string, colorId: string) => void
   selectPin: (id: string | null) => void
   setActiveColor: (id: string) => void
   setPlacementMode: (v: boolean) => void
+  setHoverSocket: (ref: SocketRef | null) => void
+}
+
+/** ピンの現在のワールド姿勢を Transform として取り出す */
+function worldTransformOf(pins: readonly Pin[], pinId: string): Transform | null {
+  const m = solveWorldTransforms(pins).get(pinId)
+  if (!m) return null
+  const pos = new Vector3()
+  const quat = new Quaternion()
+  m.decompose(pos, quat, new Vector3())
+  return { position: [pos.x, pos.y, pos.z], rotation: [quat.x, quat.y, quat.z, quat.w] }
 }
 
 /** 角度を許容リスト内で 1 ステップ進める（端でクランプ） */
@@ -46,6 +70,7 @@ export const useStudio = create<StudioState>()(
       selectedPinId: null,
       activeColorId: DEFAULT_COLOR_ID,
       placementMode: false,
+      hoverSocket: null,
 
       addRootPin: (position) => {
         const pin: Pin = {
@@ -75,7 +100,50 @@ export const useStudio = create<StudioState>()(
         set((s) => ({
           pins: s.pins.filter((p) => !doomed.has(p.id)),
           selectedPinId: doomed.has(s.selectedPinId ?? '') ? null : s.selectedPinId,
+          hoverSocket: null,
         }))
+      },
+
+      detachPin: (pinId) => {
+        const { pins } = get()
+        const pin = pins.find((p) => p.id === pinId)
+        if (!pin?.connection) return
+        const transform = worldTransformOf(pins, pinId)
+        if (!transform) return
+        set((s) => ({
+          pins: s.pins.map((p) => (p.id === pinId ? { ...p, connection: null, transform } : p)),
+        }))
+      },
+
+      duplicateSubtree: (pinId) => {
+        const { pins } = get()
+        const ids = collectSubtree(pins, pinId)
+        const idSet = new Set(ids)
+        const idMap = new Map(ids.map((id) => [id, nanoid(8)]))
+        const rootTransform = worldTransformOf(pins, pinId)
+        if (!rootTransform) return
+        const clones: Pin[] = []
+        for (const pin of pins) {
+          if (!idSet.has(pin.id)) continue
+          const id = idMap.get(pin.id)!
+          if (pin.id === pinId) {
+            // 複製のルートは自由ピン化し、元の姿勢から少しずらして置く
+            const [x, y, z] = rootTransform.position
+            clones.push({
+              id,
+              colorId: pin.colorId,
+              connection: null,
+              transform: { position: [x + 30, y + 30, z], rotation: rootTransform.rotation },
+            })
+          } else {
+            clones.push({
+              id,
+              colorId: pin.colorId,
+              connection: { ...pin.connection!, parentId: idMap.get(pin.connection!.parentId)! },
+            })
+          }
+        }
+        set((s) => ({ pins: [...s.pins, ...clones], selectedPinId: idMap.get(pinId)! }))
       },
 
       stepRoll: (pinId, dir) => {
@@ -118,6 +186,7 @@ export const useStudio = create<StudioState>()(
         if (selectedPinId) get().setPinColor(selectedPinId, id)
       },
       setPlacementMode: (v) => set({ placementMode: v }),
+      setHoverSocket: (ref) => set({ hoverSocket: ref }),
     }),
     {
       // 履歴対象はドキュメント状態のみ

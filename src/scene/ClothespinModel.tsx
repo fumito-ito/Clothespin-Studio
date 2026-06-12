@@ -1,58 +1,47 @@
-// 洗濯バサミのプロシージャル形状（暫定アセット）。
-// ドメイン座標系（Z-up, mm）で構築する。形状は domain/clothespin.ts の BODY_SEGMENTS を
-// そのまま描画し、接続点定義との整合を保つ。M4 以降に手モデリング GLB へ差し替え予定（docs/02 §6）。
+// 洗濯バサミのプロシージャル形状（暫定アセット・単体描画用）。
+// ドメイン座標系（Z-up, mm）。形状は scene/geometry.ts（= domain/clothespin.ts の定義）を共有する。
+// 通常描画は InstancedMesh（PinInstances）が担い、本コンポーネントは
+// 配置プレビューのゴースト表示などの単体用途に使う。
 
-import { BODY, BODY_SEGMENTS, SPRING } from '../domain/clothespin'
-import type { BodySegment } from '../domain/clothespin'
+import { useMemo } from 'react'
+import { buildPlasticGeometry, buildSpringGeometry } from './geometry'
 import { SPRING_COLOR } from '../assets/palette'
+
+const plasticGeometry = buildPlasticGeometry()
+const springGeometry = buildSpringGeometry(12, 48)
 
 interface Props {
   colorHex: string
   /** 選択ハイライト（発光） */
   selected?: boolean
+  /** 半透明のゴースト表示（配置プレビュー, FR-P8） */
+  ghost?: boolean
 }
 
-/** X-Z 平面内のセグメントを box で描く。長軸 = X、回転は Y 軸まわり */
-function SegmentBox({
-  seg,
-  colorHex,
-  selected,
-}: {
-  seg: BodySegment
-  colorHex: string
-  selected: boolean
-}) {
-  const dx = seg.to.x - seg.from.x
-  const dz = seg.to.z - seg.from.z
-  const length = Math.hypot(dx, dz)
-  // box の +X 端が to を向くように: R_y(θ) は +X を (cosθ, 0, −sinθ) へ写す
-  const rotY = Math.atan2(-dz, dx)
-  const cx = (seg.from.x + seg.to.x) / 2
-  const cz = (seg.from.z + seg.to.z) / 2
-  return (
-    <mesh position={[cx, 0, cz]} rotation={[0, rotY, 0]}>
-      <boxGeometry args={[length, BODY.width, seg.thickness]} />
-      <meshStandardMaterial
-        color={colorHex}
-        roughness={0.55}
-        emissive="#4a8fe7"
-        emissiveIntensity={selected ? 0.35 : 0}
-      />
-    </mesh>
+export function ClothespinModel({ colorHex, selected = false, ghost = false }: Props) {
+  const ghostProps = useMemo(
+    () => (ghost ? { transparent: true, opacity: 0.45, depthWrite: false } : {}),
+    [ghost],
   )
-}
-
-export function ClothespinModel({ colorHex, selected = false }: Props) {
   return (
     <group>
-      {BODY_SEGMENTS.map((seg, i) => (
-        <SegmentBox key={i} seg={seg} colorHex={colorHex} selected={selected} />
-      ))}
-      {/* 金属スプリングリング（コイル軸 = Y）。torus 既定は XY 平面なので X 軸 90° 回転 */}
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[SPRING.radius, SPRING.wireRadius, 12, 48]} />
+      <mesh geometry={plasticGeometry} raycast={ghost ? () => null : undefined}>
+        <meshStandardMaterial
+          color={colorHex}
+          roughness={0.55}
+          emissive="#4a8fe7"
+          emissiveIntensity={selected ? 0.35 : 0}
+          {...ghostProps}
+        />
+      </mesh>
+      <mesh geometry={springGeometry} raycast={ghost ? () => null : undefined}>
         {/* 環境マップなしでも沈まないよう metalness は控えめにする */}
-        <meshStandardMaterial color={SPRING_COLOR} metalness={0.35} roughness={0.4} />
+        <meshStandardMaterial
+          color={SPRING_COLOR}
+          metalness={0.35}
+          roughness={0.4}
+          {...ghostProps}
+        />
       </mesh>
     </group>
   )

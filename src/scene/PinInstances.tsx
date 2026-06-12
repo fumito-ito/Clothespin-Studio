@@ -4,43 +4,20 @@
 // クリックは instanceId からピンを特定。ソケットマーカーは選択ピンにのみ表示。
 
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import {
-  BoxGeometry,
-  Color,
-  Quaternion,
-  TorusGeometry,
-  Vector3,
-  type InstancedMesh as TInstancedMesh,
-} from 'three'
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { Color, Quaternion, Vector3, type InstancedMesh as TInstancedMesh } from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
-import { BODY, BODY_SEGMENTS, SPRING } from '../domain/clothespin'
-import { solveWorldTransforms } from '../domain/solve'
+import { socketByIndex } from '../domain/clothespin'
+import { childWorldMatrix, solveWorldTransforms } from '../domain/solve'
 import { occupiedSockets } from '../domain/graph'
 import { useStudio } from '../state/store'
 import { DEFAULT_PALETTE, SPRING_COLOR } from '../assets/palette'
 import { SocketMarkers } from './SocketMarkers'
-
-/** 本体 4 セグメントを 1 ジオメトリに結合（ClothespinModel と同じ構成・モジュールで 1 回だけ） */
-function buildPlasticGeometry() {
-  const parts = BODY_SEGMENTS.map((seg) => {
-    const dx = seg.to.x - seg.from.x
-    const dz = seg.to.z - seg.from.z
-    const g = new BoxGeometry(Math.hypot(dx, dz), BODY.width, seg.thickness)
-    g.rotateY(Math.atan2(-dz, dx))
-    g.translate((seg.from.x + seg.to.x) / 2, 0, (seg.from.z + seg.to.z) / 2)
-    return g
-  })
-  const merged = mergeGeometries(parts)
-  parts.forEach((g) => g.dispose())
-  return merged
-}
+import { ClothespinModel } from './ClothespinModel'
+import { buildPlasticGeometry, buildSpringGeometry } from './geometry'
 
 const plasticGeometry = buildPlasticGeometry()
 // インスタンス描画用は控えめなポリゴン数にする（5,000 個で約 1.9M tri）
-const springGeometry = new TorusGeometry(SPRING.radius, SPRING.wireRadius, 8, 24).rotateX(
-  Math.PI / 2,
-)
+const springGeometry = buildSpringGeometry(8, 24)
 
 const HEX_BY_ID = new Map(DEFAULT_PALETTE.map((c) => [c.id, c.hex]))
 const HIGHLIGHT = new Color('#4a8fe7')
@@ -102,6 +79,21 @@ export function PinInstances() {
     [pins, selectedPinId],
   )
 
+  // ソケットホバー時の配置プレビュー（FR-P8）: 接続後の既定姿勢を半透明表示
+  const hoverSocket = useStudio((s) => s.hoverSocket)
+  const activeColorId = useStudio((s) => s.activeColorId)
+  const ghostPose = useMemo(() => {
+    if (!hoverSocket) return null
+    const parentWorld = matrices.get(hoverSocket.pinId)
+    const socket = socketByIndex(hoverSocket.gripIndex)
+    if (!parentWorld || !socket) return null
+    const m = childWorldMatrix(parentWorld, socket, 0, 0)
+    const position = new Vector3()
+    const quaternion = new Quaternion()
+    m.decompose(position, quaternion, new Vector3())
+    return { position, quaternion }
+  }, [hoverSocket, matrices])
+
   return (
     <>
       <instancedMesh
@@ -126,6 +118,12 @@ export function PinInstances() {
       {selectedPinId && selectedPose && selectedOccupied && (
         <group position={selectedPose.position} quaternion={selectedPose.quaternion}>
           <SocketMarkers pinId={selectedPinId} occupied={selectedOccupied} />
+        </group>
+      )}
+
+      {ghostPose && (
+        <group position={ghostPose.position} quaternion={ghostPose.quaternion}>
+          <ClothespinModel colorHex={HEX_BY_ID.get(activeColorId) ?? FALLBACK_HEX} ghost />
         </group>
       )}
     </>

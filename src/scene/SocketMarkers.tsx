@@ -28,6 +28,7 @@ function Marker({
   isOccupied: boolean
 }) {
   const connectPin = useStudio((s) => s.connectPin)
+  const setHoverSocket = useStudio((s) => s.setHoverSocket)
   const [hovered, setHovered] = useState(false)
 
   const dof = (socket.rollMaxAbsDeg > 0 ? 1 : 0) + (socket.pitchMaxAbsDeg !== null ? 1 : 0)
@@ -35,7 +36,10 @@ function Marker({
 
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation()
-    if (!isOccupied) connectPin(pinId, socket.index)
+    if (!isOccupied) {
+      setHoverSocket(null)
+      connectPin(pinId, socket.index)
+    }
   }
 
   return (
@@ -46,11 +50,13 @@ function Marker({
           e.stopPropagation()
           if (!isOccupied) {
             setHovered(true)
+            setHoverSocket({ pinId, gripIndex: socket.index }) // 配置プレビュー（FR-P8）
             document.body.style.cursor = 'pointer'
           }
         }}
         onPointerOut={() => {
           setHovered(false)
+          setHoverSocket(null)
           document.body.style.cursor = 'auto'
         }}
       >

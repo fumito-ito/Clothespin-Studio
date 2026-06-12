@@ -5,8 +5,18 @@ import type { CSSProperties, ReactNode } from 'react'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
 import { buildBom } from '../domain/bom'
+import { computeBounds } from '../domain/bounds'
 import { redo, undo, useStudio } from '../state/store'
-import { confirmAndDelete, exportBomCsv, loadProjectFile, saveProjectFile } from './actions'
+import {
+  confirmAndDelete,
+  exportBomCsv,
+  exportGlbAction,
+  exportPng,
+  exportStlAction,
+  frameView,
+  loadProjectFile,
+  saveProjectFile,
+} from './actions'
 
 const panelStyle: CSSProperties = {
   position: 'absolute',
@@ -72,6 +82,8 @@ export function ControlPanel() {
   const selected = pins.find((p) => p.id === selectedPinId)
   const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
   const bom = useMemo(() => buildBom(pins, DEFAULT_PALETTE), [pins])
+  const bounds = useMemo(() => computeBounds(pins), [pins])
+  const cm = (mm: number) => (mm / 10).toFixed(1)
 
   return (
     <div style={panelStyle}>
@@ -105,6 +117,15 @@ export function ControlPanel() {
         <Btn onClick={() => setPlacementMode(!placementMode)} active={placementMode}>
           {placementMode ? '配置をキャンセル (Esc)' : '🧷 ルートピンを配置'}
         </Btn>
+      </div>
+
+      {/* 視点（FR-V3/V5） */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+        <Btn onClick={() => frameView('front')}>正面</Btn>
+        <Btn onClick={() => frameView('top')}>上</Btn>
+        <Btn onClick={() => frameView('side')}>横</Btn>
+        <Btn onClick={() => frameView('iso')}>等角</Btn>
+        <Btn onClick={() => frameView()}>⊡ Fit</Btn>
       </div>
       {placementMode && (
         <div style={{ color: 'var(--color-accent)', fontSize: 12, marginBottom: 8 }}>
@@ -171,7 +192,11 @@ export function ControlPanel() {
             </>
           )}
 
-          <div style={{ marginTop: 6 }}>
+          <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <Btn onClick={() => useStudio.getState().duplicateSubtree(selected.id)}>複製 (⌘D)</Btn>
+            {selected.connection && (
+              <Btn onClick={() => useStudio.getState().detachPin(selected.id)}>切り離し</Btn>
+            )}
             <Btn onClick={() => confirmAndDelete(selected.id)}>削除 (Del)</Btn>
           </div>
         </div>
@@ -205,6 +230,12 @@ export function ControlPanel() {
             <span>合計</span>
             <span>{bom.total}</span>
           </div>
+          {bounds && (
+            <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
+              サイズ: {cm(bounds.size[0])} × {cm(bounds.size[1])} × {cm(bounds.size[2])}{' '}
+              cm（長さ×厚み×高さ）
+            </div>
+          )}
         </div>
       )}
 
@@ -217,6 +248,17 @@ export function ControlPanel() {
         <Btn onClick={exportBomCsv} disabled={pins.length === 0}>
           CSV
         </Btn>
+      </div>
+
+      {/* エクスポート（FR-IO4/5/6） */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+        <Btn onClick={exportGlbAction} disabled={pins.length === 0}>
+          GLB
+        </Btn>
+        <Btn onClick={exportStlAction} disabled={pins.length === 0}>
+          STL
+        </Btn>
+        <Btn onClick={exportPng}>PNG</Btn>
       </div>
       <input
         ref={fileInputRef}
@@ -232,7 +274,9 @@ export function ControlPanel() {
 
       <div style={{ color: 'var(--color-text-dim)', fontSize: 11, marginTop: 8 }}>
         ピンをクリック = 選択 / ソケット球クリック = 連結
-        <br />[ ] = roll / {'{ }'} = pitch / Del = 削除 / ⌘Z = Undo
+        <br />[ ] = roll / {'{ }'} = pitch / Del = 削除
+        <br />
+        ⌘Z = Undo / ⇧⌘Z = Redo / ⌘D = 複製
         <br />
         ドラッグ: 回転 / 右ドラッグ: パン / ホイール: ズーム
       </div>
