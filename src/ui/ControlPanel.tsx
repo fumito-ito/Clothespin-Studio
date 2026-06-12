@@ -6,6 +6,7 @@ import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
 import { buildBom } from '../domain/bom'
 import { computeBounds } from '../domain/bounds'
+import { COLOR_NAME_KEYS, useT } from '../i18n'
 import { redo, undo, useStudio } from '../state/store'
 import {
   confirmAndDelete,
@@ -77,6 +78,9 @@ export function ControlPanel() {
   const setActiveColor = useStudio((s) => s.setActiveColor)
   const stepRoll = useStudio((s) => s.stepRoll)
   const stepPitch = useStudio((s) => s.stepPitch)
+  const lang = useStudio((s) => s.lang)
+  const setLang = useStudio((s) => s.setLang)
+  const t = useT()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selected = pins.find((p) => p.id === selectedPinId)
@@ -84,16 +88,32 @@ export function ControlPanel() {
   const bom = useMemo(() => buildBom(pins, DEFAULT_PALETTE), [pins])
   const bounds = useMemo(() => computeBounds(pins), [pins])
   const cm = (mm: number) => (mm / 10).toFixed(1)
+  const colorName = (colorId: string, fallback: string) => {
+    const key = COLOR_NAME_KEYS[colorId]
+    return key ? t(key) : fallback
+  }
 
   return (
     <div style={panelStyle}>
-      <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Clothespin Studio 🧷</div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 6,
+        }}
+      >
+        <span style={{ fontSize: 15, fontWeight: 600 }}>Clothespin Studio 🧷</span>
+        <Btn onClick={() => setLang(lang === 'ja' ? 'en' : 'ja')}>
+          {lang === 'ja' ? 'EN' : 'JA'}
+        </Btn>
+      </div>
 
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
         {DEFAULT_PALETTE.map((c) => (
           <button
             key={c.id}
-            title={c.name}
+            title={colorName(c.id, c.name)}
             onClick={() => setActiveColor(c.id)}
             style={{
               width: 26,
@@ -109,27 +129,27 @@ export function ControlPanel() {
           />
         ))}
         <span style={{ color: 'var(--color-text-dim)', fontSize: 11, marginLeft: 4 }}>
-          {pins.length} ピン
+          {t('pinCount', { n: pins.length })}
         </span>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         <Btn onClick={() => setPlacementMode(!placementMode)} active={placementMode}>
-          {placementMode ? '配置をキャンセル (Esc)' : '🧷 ルートピンを配置'}
+          {placementMode ? t('cancelPlace') : t('placeRoot')}
         </Btn>
       </div>
 
       {/* 視点（FR-V3/V5） */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
-        <Btn onClick={() => frameView('front')}>正面</Btn>
-        <Btn onClick={() => frameView('top')}>上</Btn>
-        <Btn onClick={() => frameView('side')}>横</Btn>
-        <Btn onClick={() => frameView('iso')}>等角</Btn>
-        <Btn onClick={() => frameView()}>⊡ Fit</Btn>
+        <Btn onClick={() => frameView('front')}>{t('viewFront')}</Btn>
+        <Btn onClick={() => frameView('top')}>{t('viewTop')}</Btn>
+        <Btn onClick={() => frameView('side')}>{t('viewSide')}</Btn>
+        <Btn onClick={() => frameView('iso')}>{t('viewIso')}</Btn>
+        <Btn onClick={() => frameView()}>{t('viewFit')}</Btn>
       </div>
       {placementMode && (
         <div style={{ color: 'var(--color-accent)', fontSize: 12, marginBottom: 8 }}>
-          地面をクリックして配置（1cm スナップ）
+          {t('placementHint')}
         </div>
       )}
 
@@ -142,10 +162,13 @@ export function ControlPanel() {
           }}
         >
           <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
-            選択中: {selected.id}{' '}
+            {t('selectedLabel', { id: selected.id })}
             {selected.connection
-              ? `（親 ${selected.connection.parentId} の ${socket?.id}）`
-              : '（ルート）'}
+              ? t('selectedConn', {
+                  parent: selected.connection.parentId,
+                  socket: socket?.id ?? '',
+                })
+              : t('selectedRoot')}
           </div>
 
           {selected.connection && socket && (
@@ -185,19 +208,21 @@ export function ControlPanel() {
               </div>
               <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
                 {socket.rollMaxAbsDeg > 0
-                  ? `roll 範囲 ±${Math.max(...allowedAngles(socket.rollMaxAbsDeg))}°`
-                  : 'roll 不可'}
-                {socket.pitchMaxAbsDeg !== null && ` / pitch 範囲 ±${socket.pitchMaxAbsDeg}°`}
+                  ? t('rollRange', { n: Math.max(...allowedAngles(socket.rollMaxAbsDeg)) })
+                  : t('rollNone')}
+                {socket.pitchMaxAbsDeg !== null && t('pitchRange', { n: socket.pitchMaxAbsDeg })}
               </div>
             </>
           )}
 
           <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <Btn onClick={() => useStudio.getState().duplicateSubtree(selected.id)}>複製 (⌘D)</Btn>
+            <Btn onClick={() => useStudio.getState().duplicateSubtree(selected.id)}>
+              {t('duplicate')}
+            </Btn>
             {selected.connection && (
-              <Btn onClick={() => useStudio.getState().detachPin(selected.id)}>切り離し</Btn>
+              <Btn onClick={() => useStudio.getState().detachPin(selected.id)}>{t('detach')}</Btn>
             )}
-            <Btn onClick={() => confirmAndDelete(selected.id)}>削除 (Del)</Btn>
+            <Btn onClick={() => confirmAndDelete(selected.id)}>{t('delete')}</Btn>
           </div>
         </div>
       )}
@@ -222,18 +247,21 @@ export function ControlPanel() {
                   flexShrink: 0,
                 }}
               />
-              <span style={{ flex: 1 }}>{row.colorName}</span>
+              <span style={{ flex: 1 }}>{colorName(row.colorId, row.colorName)}</span>
               <span>{row.count}</span>
             </div>
           ))}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-            <span>合計</span>
+            <span>{t('total')}</span>
             <span>{bom.total}</span>
           </div>
           {bounds && (
             <div style={{ color: 'var(--color-text-dim)', fontSize: 11 }}>
-              サイズ: {cm(bounds.size[0])} × {cm(bounds.size[1])} × {cm(bounds.size[2])}{' '}
-              cm（長さ×厚み×高さ）
+              {t('sizeLabel', {
+                x: cm(bounds.size[0]),
+                y: cm(bounds.size[1]),
+                z: cm(bounds.size[2]),
+              })}
             </div>
           )}
         </div>
@@ -242,9 +270,9 @@ export function ControlPanel() {
       {/* 入出力（FR-IO1/2/3） */}
       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
         <Btn onClick={saveProjectFile} disabled={pins.length === 0}>
-          💾 保存
+          {t('save')}
         </Btn>
-        <Btn onClick={() => fileInputRef.current?.click()}>📂 読込</Btn>
+        <Btn onClick={() => fileInputRef.current?.click()}>{t('load')}</Btn>
         <Btn onClick={exportBomCsv} disabled={pins.length === 0}>
           CSV
         </Btn>
@@ -273,12 +301,13 @@ export function ControlPanel() {
       />
 
       <div style={{ color: 'var(--color-text-dim)', fontSize: 11, marginTop: 8 }}>
-        ピンをクリック = 選択 / ソケット球クリック = 連結
-        <br />[ ] = roll / {'{ }'} = pitch / Del = 削除
+        {t('helpLine1')}
         <br />
-        ⌘Z = Undo / ⇧⌘Z = Redo / ⌘D = 複製
+        {t('helpLine2')}
         <br />
-        ドラッグ: 回転 / 右ドラッグ: パン / ホイール: ズーム
+        {t('helpLine3')}
+        <br />
+        {t('helpLine4')}
       </div>
     </div>
   )

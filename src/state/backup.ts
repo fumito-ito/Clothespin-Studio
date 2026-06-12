@@ -4,6 +4,7 @@
 import { parseProject, serializeProject } from '../io/project'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { useStudio } from './store'
+import { t } from '../i18n'
 
 const KEY = 'clothespin-studio.backup'
 let initialized = false // StrictMode の二重実行ガード
@@ -17,11 +18,7 @@ export function initBackup() {
     if (raw && useStudio.getState().pins.length === 0) {
       const { project, errors } = parseProject(raw)
       if (errors.length === 0 && project && project.pins.length > 0) {
-        if (
-          window.confirm(
-            `前回の作業バックアップ（${project.pins.length} ピン）が見つかりました。復元しますか？`,
-          )
-        ) {
+        if (window.confirm(t('confirmRestore', { n: project.pins.length }))) {
           useStudio.setState({ pins: project.pins })
           useStudio.temporal.getState().clear()
         }

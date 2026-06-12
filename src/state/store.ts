@@ -10,11 +10,24 @@ import { DIMENSIONS, allowedAngles, socketByIndex } from '../domain/clothespin'
 import { collectSubtree, occupiedSockets } from '../domain/graph'
 import { solveWorldTransforms } from '../domain/solve'
 import { DEFAULT_COLOR_ID } from '../assets/palette'
+import type { Lang } from '../i18n/messages'
 
 /** ホバー中の GRIP ソケット（配置プレビュー用, FR-P8） */
 export interface SocketRef {
   pinId: string
   gripIndex: number
+}
+
+const LANG_KEY = 'clothespin-studio.lang'
+
+function initialLang(): Lang {
+  try {
+    const saved = localStorage.getItem(LANG_KEY)
+    if (saved === 'ja' || saved === 'en') return saved
+  } catch {
+    // localStorage 不可なら既定へ
+  }
+  return navigator.language.startsWith('ja') ? 'ja' : 'en'
 }
 
 interface StudioState {
@@ -27,6 +40,8 @@ interface StudioState {
   /** true = 地面クリックでルートピンを配置するモード */
   placementMode: boolean
   hoverSocket: SocketRef | null
+  /** UI 言語（NFR-7）。localStorage に永続化 */
+  lang: Lang
 
   // コマンド
   addRootPin: (position: Vec3) => void
@@ -43,6 +58,7 @@ interface StudioState {
   setActiveColor: (id: string) => void
   setPlacementMode: (v: boolean) => void
   setHoverSocket: (ref: SocketRef | null) => void
+  setLang: (lang: Lang) => void
 }
 
 /** ピンの現在のワールド姿勢を Transform として取り出す */
@@ -71,6 +87,7 @@ export const useStudio = create<StudioState>()(
       activeColorId: DEFAULT_COLOR_ID,
       placementMode: false,
       hoverSocket: null,
+      lang: initialLang(),
 
       addRootPin: (position) => {
         const pin: Pin = {
@@ -187,6 +204,14 @@ export const useStudio = create<StudioState>()(
       },
       setPlacementMode: (v) => set({ placementMode: v }),
       setHoverSocket: (ref) => set({ hoverSocket: ref }),
+      setLang: (lang) => {
+        set({ lang })
+        try {
+          localStorage.setItem(LANG_KEY, lang)
+        } catch {
+          // 永続化できなくても言語切替自体は有効
+        }
+      },
     }),
     {
       // 履歴対象はドキュメント状態のみ

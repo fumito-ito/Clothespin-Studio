@@ -12,6 +12,7 @@ import { exportStl } from '../io/exportStl'
 import { downloadText, timestamp } from '../io/download'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { useStudio } from '../state/store'
+import { t } from '../i18n'
 import { viewport } from '../scene/viewportHandle'
 
 export { exportPng } from '../io/exportPng'
@@ -21,7 +22,7 @@ export function confirmAndDelete(pinId: string) {
   const { pins, deleteSubtree } = useStudio.getState()
   const childCount = childrenByParent(pins).get(pinId)?.length ?? 0
   if (childCount > 0) {
-    if (!window.confirm('子ピンを含むサブツリー全体を削除します。よろしいですか？')) return
+    if (!window.confirm(t('confirmDeleteSubtree'))) return
   }
   deleteSubtree(pinId)
 }
@@ -42,15 +43,11 @@ export async function loadProjectFile(file: File) {
   const text = await file.text()
   const { project, errors } = parseProject(text)
   if (errors.length > 0 || !project) {
-    window.alert(`読み込みに失敗しました:\n- ${errors.join('\n- ')}`)
+    window.alert(`${t('loadFailed')}\n- ${errors.join('\n- ')}`)
     return
   }
   if (useStudio.getState().pins.length > 0) {
-    if (
-      !window.confirm(
-        `現在のモデル（${useStudio.getState().pins.length} ピン）を破棄して読み込みます。よろしいですか？`,
-      )
-    ) {
+    if (!window.confirm(t('confirmReplace', { n: useStudio.getState().pins.length }))) {
       return
     }
   }
