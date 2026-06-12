@@ -5,6 +5,8 @@ LEGO 向けの [BrickLink Studio](https://www.bricklink.com/v3/studio/main.page)
 
 3D 空間上で洗濯バサミ同士を **クリップで挟み合って** 連結し、設計したモデルを各種形式でダウンロードできます。
 
+**🌐 公開版: https://fumito-ito.github.io/Clothespin-Studio/** （main への push で自動デプロイ）
+
 ---
 
 ## このリポジトリの現状
