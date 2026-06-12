@@ -1,10 +1,12 @@
-// 左上のオーバーレイパネル。配置・色・選択中ピンの操作（M2）。
+// 左上のオーバーレイパネル。配置・色・選択中ピンの操作・統計・入出力（M2–M3）。
 
+import { useMemo, useRef } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
+import { buildBom } from '../domain/bom'
 import { redo, undo, useStudio } from '../state/store'
-import { confirmAndDelete } from './actions'
+import { confirmAndDelete, exportBomCsv, loadProjectFile, saveProjectFile } from './actions'
 
 const panelStyle: CSSProperties = {
   position: 'absolute',
@@ -65,9 +67,11 @@ export function ControlPanel() {
   const setActiveColor = useStudio((s) => s.setActiveColor)
   const stepRoll = useStudio((s) => s.stepRoll)
   const stepPitch = useStudio((s) => s.stepPitch)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const selected = pins.find((p) => p.id === selectedPinId)
   const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
+  const bom = useMemo(() => buildBom(pins, DEFAULT_PALETTE), [pins])
 
   return (
     <div style={panelStyle}>
@@ -177,6 +181,54 @@ export function ControlPanel() {
         <Btn onClick={undo}>↩ Undo</Btn>
         <Btn onClick={redo}>↪ Redo</Btn>
       </div>
+
+      {/* 部品表（FR-S1/S2） */}
+      {bom.total > 0 && (
+        <div style={{ borderTop: '1px solid var(--color-border)', marginTop: 8, paddingTop: 6 }}>
+          {bom.rows.map((row) => (
+            <div key={row.colorId} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 3,
+                  background: row.hex,
+                  border: '1px solid var(--color-border)',
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ flex: 1 }}>{row.colorName}</span>
+              <span>{row.count}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+            <span>合計</span>
+            <span>{bom.total}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 入出力（FR-IO1/2/3） */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <Btn onClick={saveProjectFile} disabled={pins.length === 0}>
+          💾 保存
+        </Btn>
+        <Btn onClick={() => fileInputRef.current?.click()}>📂 読込</Btn>
+        <Btn onClick={exportBomCsv} disabled={pins.length === 0}>
+          CSV
+        </Btn>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) void loadProjectFile(file)
+          e.target.value = '' // 同じファイルの再選択を可能にする
+        }}
+      />
 
       <div style={{ color: 'var(--color-text-dim)', fontSize: 11, marginTop: 8 }}>
         ピンをクリック = 選択 / ソケット球クリック = 連結

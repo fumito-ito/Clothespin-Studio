@@ -135,5 +135,40 @@ export const redo = () => useStudio.temporal.getState().redo()
 
 // 開発時のみ: コンソール / E2E からストアを操作できるようにする
 if (import.meta.env.DEV) {
-  ;(window as unknown as Record<string, unknown>).__studio = useStudio
+  const w = window as unknown as Record<string, unknown>
+  w.__studio = useStudio
+
+  // 負荷テスト用シーン生成（NFR-1）: g4 連結のタワーを格子状に並べる
+  w.__stress = (total: number, perTower = 100) => {
+    const colors = ['blue', 'white', 'warmgray']
+    const towers = Math.ceil(total / perTower)
+    const cols = Math.ceil(Math.sqrt(towers))
+    const pins: Pin[] = []
+    let count = 0
+    for (let t = 0; t < towers && count < total; t++) {
+      const x = (t % cols) * 100 - (cols - 1) * 50
+      const y = Math.floor(t / cols) * 100 - (cols - 1) * 50
+      let parentId = `s${t}`
+      pins.push({
+        id: parentId,
+        colorId: colors[t % 3],
+        connection: null,
+        transform: { position: [x, y, ROOT_PIN_Z], rotation: [0, 0, 0, 1] },
+      })
+      count++
+      for (let i = 1; i < perTower && count < total; i++) {
+        const id = `s${t}-${i}`
+        pins.push({
+          id,
+          colorId: colors[(t + i) % 3],
+          connection: { parentId, gripIndex: 4, roll: 0 },
+        })
+        parentId = id
+        count++
+      }
+    }
+    useStudio.setState({ pins, selectedPinId: null, placementMode: false })
+    useStudio.temporal.getState().clear()
+    return count
+  }
 }

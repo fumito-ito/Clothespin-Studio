@@ -4,9 +4,9 @@
 // 地面 = ドメイン Z=0 平面 = ワールド XZ 平面。
 
 import { Canvas } from '@react-three/fiber'
-import { ContactShadows, Grid, OrbitControls } from '@react-three/drei'
+import { Grid, OrbitControls } from '@react-three/drei'
 import { useStudio } from '../state/store'
-import { Pins } from './Pins'
+import { PinInstances } from './PinInstances'
 import { GroundPlane } from './GroundPlane'
 
 export function Viewport() {
@@ -32,11 +32,9 @@ export function Viewport() {
         fadeDistance={800}
         followCamera={false}
       />
-      <ContactShadows position={[0, 0.1, 0]} opacity={0.35} scale={400} blur={2.2} far={80} />
-
       {/* ドメイン座標系 (Z-up) */}
       <group rotation={[-Math.PI / 2, 0, 0]}>
-        <Pins />
+        <PinInstances />
         <GroundPlane />
       </group>
 
