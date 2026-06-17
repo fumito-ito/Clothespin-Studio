@@ -108,7 +108,11 @@ describe('placementCollidingPinId', () => {
     const g4 = GRIP_SOCKETS[4]
     const m = solveWorldTransforms([root]).get('root')!
     const childM = childWorldMatrix(m, g4, 0, 0)
-    const pos = [childM.elements[12], childM.elements[13], childM.elements[14]] as [number, number, number]
+    const pos = [childM.elements[12], childM.elements[13], childM.elements[14]] as [
+      number,
+      number,
+      number,
+    ]
     const blocker: Pin = {
       id: 'blocker',
       colorId: 'white',

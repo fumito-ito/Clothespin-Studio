@@ -9,6 +9,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { socketByIndex } from '../domain/clothespin'
 import { childWorldMatrix, solveWorldTransforms } from '../domain/solve'
 import { occupiedSockets } from '../domain/graph'
+import { collidingPinId } from '../domain/collision'
 import { useStudio } from '../state/store'
 import { DEFAULT_PALETTE, SPRING_COLOR } from '../assets/palette'
 import { SocketMarkers } from './SocketMarkers'
@@ -22,6 +23,7 @@ const springGeometry = buildSpringGeometry(8, 24)
 const HEX_BY_ID = new Map(DEFAULT_PALETTE.map((c) => [c.id, c.hex]))
 const HIGHLIGHT = new Color('#4a8fe7')
 const FALLBACK_HEX = '#888888'
+const GHOST_COLLIDE = '#e23b3b'
 
 export function PinInstances() {
   const pins = useStudio((s) => s.pins)
@@ -79,10 +81,11 @@ export function PinInstances() {
     [pins, selectedPinId],
   )
 
-  // ソケットホバー時の配置プレビュー（FR-P8）: 接続後の既定姿勢を半透明表示
+  // ソケットホバー時の配置プレビュー（FR-P8）: 接続後の既定姿勢を半透明表示。
+  // あわせて干渉判定（FR-P7）し、干渉するなら赤いゴーストにする。
   const hoverSocket = useStudio((s) => s.hoverSocket)
   const activeColorId = useStudio((s) => s.activeColorId)
-  const ghostPose = useMemo(() => {
+  const ghost = useMemo(() => {
     if (!hoverSocket) return null
     const parentWorld = matrices.get(hoverSocket.pinId)
     const socket = socketByIndex(hoverSocket.gripIndex)
@@ -91,8 +94,14 @@ export function PinInstances() {
     const position = new Vector3()
     const quaternion = new Quaternion()
     m.decompose(position, quaternion, new Vector3())
-    return { position, quaternion }
-  }, [hoverSocket, matrices])
+    // 親とその兄弟（同じハブの正当な近接）は除外
+    const exclude = new Set<string>([hoverSocket.pinId])
+    for (const p of pins) {
+      if (p.connection?.parentId === hoverSocket.pinId) exclude.add(p.id)
+    }
+    const colliding = collidingPinId(m, matrices, exclude) !== null
+    return { position, quaternion, colliding }
+  }, [hoverSocket, matrices, pins])
 
   return (
     <>
@@ -121,9 +130,14 @@ export function PinInstances() {
         </group>
       )}
 
-      {ghostPose && (
-        <group position={ghostPose.position} quaternion={ghostPose.quaternion}>
-          <ClothespinModel colorHex={HEX_BY_ID.get(activeColorId) ?? FALLBACK_HEX} ghost />
+      {ghost && (
+        <group position={ghost.position} quaternion={ghost.quaternion}>
+          <ClothespinModel
+            colorHex={
+              ghost.colliding ? GHOST_COLLIDE : (HEX_BY_ID.get(activeColorId) ?? FALLBACK_HEX)
+            }
+            ghost
+          />
         </group>
       )}
     </>

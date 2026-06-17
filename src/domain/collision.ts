@@ -103,17 +103,53 @@ export function obbIntersect(a: Obb, b: Obb, tolerance = 0): boolean {
 
   // 9 つの外積軸 a.u[i] × b.u[j]
   // i=0
-  if (Math.abs(t[2] * R[1][0] - t[1] * R[2][0]) > ea[1] * AbsR[2][0] + ea[2] * AbsR[1][0] + eb[1] * AbsR[0][2] + eb[2] * AbsR[0][1]) return false
-  if (Math.abs(t[2] * R[1][1] - t[1] * R[2][1]) > ea[1] * AbsR[2][1] + ea[2] * AbsR[1][1] + eb[0] * AbsR[0][2] + eb[2] * AbsR[0][0]) return false
-  if (Math.abs(t[2] * R[1][2] - t[1] * R[2][2]) > ea[1] * AbsR[2][2] + ea[2] * AbsR[1][2] + eb[0] * AbsR[0][1] + eb[1] * AbsR[0][0]) return false
+  if (
+    Math.abs(t[2] * R[1][0] - t[1] * R[2][0]) >
+    ea[1] * AbsR[2][0] + ea[2] * AbsR[1][0] + eb[1] * AbsR[0][2] + eb[2] * AbsR[0][1]
+  )
+    return false
+  if (
+    Math.abs(t[2] * R[1][1] - t[1] * R[2][1]) >
+    ea[1] * AbsR[2][1] + ea[2] * AbsR[1][1] + eb[0] * AbsR[0][2] + eb[2] * AbsR[0][0]
+  )
+    return false
+  if (
+    Math.abs(t[2] * R[1][2] - t[1] * R[2][2]) >
+    ea[1] * AbsR[2][2] + ea[2] * AbsR[1][2] + eb[0] * AbsR[0][1] + eb[1] * AbsR[0][0]
+  )
+    return false
   // i=1
-  if (Math.abs(t[0] * R[2][0] - t[2] * R[0][0]) > ea[0] * AbsR[2][0] + ea[2] * AbsR[0][0] + eb[1] * AbsR[1][2] + eb[2] * AbsR[1][1]) return false
-  if (Math.abs(t[0] * R[2][1] - t[2] * R[0][1]) > ea[0] * AbsR[2][1] + ea[2] * AbsR[0][1] + eb[0] * AbsR[1][2] + eb[2] * AbsR[1][0]) return false
-  if (Math.abs(t[0] * R[2][2] - t[2] * R[0][2]) > ea[0] * AbsR[2][2] + ea[2] * AbsR[0][2] + eb[0] * AbsR[1][1] + eb[1] * AbsR[1][0]) return false
+  if (
+    Math.abs(t[0] * R[2][0] - t[2] * R[0][0]) >
+    ea[0] * AbsR[2][0] + ea[2] * AbsR[0][0] + eb[1] * AbsR[1][2] + eb[2] * AbsR[1][1]
+  )
+    return false
+  if (
+    Math.abs(t[0] * R[2][1] - t[2] * R[0][1]) >
+    ea[0] * AbsR[2][1] + ea[2] * AbsR[0][1] + eb[0] * AbsR[1][2] + eb[2] * AbsR[1][0]
+  )
+    return false
+  if (
+    Math.abs(t[0] * R[2][2] - t[2] * R[0][2]) >
+    ea[0] * AbsR[2][2] + ea[2] * AbsR[0][2] + eb[0] * AbsR[1][1] + eb[1] * AbsR[1][0]
+  )
+    return false
   // i=2
-  if (Math.abs(t[1] * R[0][0] - t[0] * R[1][0]) > ea[0] * AbsR[1][0] + ea[1] * AbsR[0][0] + eb[1] * AbsR[2][2] + eb[2] * AbsR[2][1]) return false
-  if (Math.abs(t[1] * R[0][1] - t[0] * R[1][1]) > ea[0] * AbsR[1][1] + ea[1] * AbsR[0][1] + eb[0] * AbsR[2][2] + eb[2] * AbsR[2][0]) return false
-  if (Math.abs(t[1] * R[0][2] - t[0] * R[1][2]) > ea[0] * AbsR[1][2] + ea[1] * AbsR[0][2] + eb[0] * AbsR[2][1] + eb[1] * AbsR[2][0]) return false
+  if (
+    Math.abs(t[1] * R[0][0] - t[0] * R[1][0]) >
+    ea[0] * AbsR[1][0] + ea[1] * AbsR[0][0] + eb[1] * AbsR[2][2] + eb[2] * AbsR[2][1]
+  )
+    return false
+  if (
+    Math.abs(t[1] * R[0][1] - t[0] * R[1][1]) >
+    ea[0] * AbsR[1][1] + ea[1] * AbsR[0][1] + eb[0] * AbsR[2][2] + eb[2] * AbsR[2][0]
+  )
+    return false
+  if (
+    Math.abs(t[1] * R[0][2] - t[0] * R[1][2]) >
+    ea[0] * AbsR[1][2] + ea[1] * AbsR[0][2] + eb[0] * AbsR[2][1] + eb[1] * AbsR[2][0]
+  )
+    return false
 
   return true // どの軸でも分離できない = 重なっている
 }
