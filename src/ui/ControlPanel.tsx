@@ -1,7 +1,7 @@
 // 左上のオーバーレイパネル。配置・色・選択中ピンの操作・統計・入出力（M2–M3）。
 
-import { useMemo, useRef } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
 import { buildBom } from '../domain/bom'
@@ -18,6 +18,8 @@ import {
   loadProjectFile,
   saveProjectFile,
 } from './actions'
+import { Btn } from './Btn'
+import { GeneratorDialog } from './GeneratorDialog'
 
 const panelStyle: CSSProperties = {
   position: 'absolute',
@@ -33,42 +35,6 @@ const panelStyle: CSSProperties = {
   width: 230,
 }
 
-const buttonStyle: CSSProperties = {
-  background: '#262b34',
-  color: 'var(--color-text)',
-  border: '1px solid var(--color-border)',
-  borderRadius: 6,
-  padding: '4px 10px',
-  cursor: 'pointer',
-  fontSize: 12,
-}
-
-function Btn({
-  onClick,
-  active,
-  disabled,
-  children,
-}: {
-  onClick: () => void
-  active?: boolean
-  disabled?: boolean
-  children: ReactNode
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        ...buttonStyle,
-        ...(active ? { borderColor: 'var(--color-accent)', color: 'var(--color-accent)' } : {}),
-        ...(disabled ? { opacity: 0.4, cursor: 'default' } : {}),
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
 export function ControlPanel() {
   const pins = useStudio((s) => s.pins)
   const selectedPinId = useStudio((s) => s.selectedPinId)
@@ -82,6 +48,7 @@ export function ControlPanel() {
   const setLang = useStudio((s) => s.setLang)
   const t = useT()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [genOpen, setGenOpen] = useState(false)
 
   const selected = pins.find((p) => p.id === selectedPinId)
   const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
@@ -137,6 +104,7 @@ export function ControlPanel() {
         <Btn onClick={() => setPlacementMode(!placementMode)} active={placementMode}>
           {placementMode ? t('cancelPlace') : t('placeRoot')}
         </Btn>
+        <Btn onClick={() => setGenOpen(true)}>{t('genOpen')}</Btn>
       </div>
 
       {/* 視点（FR-V3/V5） */}
@@ -309,6 +277,8 @@ export function ControlPanel() {
         <br />
         {t('helpLine4')}
       </div>
+
+      {genOpen && <GeneratorDialog onClose={() => setGenOpen(false)} />}
     </div>
   )
 }
