@@ -180,6 +180,73 @@ export function collidingPinId(
 }
 
 /**
+ * モデル全体をチェックし、干渉している（= 非除外ペアで重なっている）ピン id の集合を返す。
+ * 除外ペア: 直接連結（親子）と、同じ親を持つ兄弟（ハブでの正当な近接）。
+ * 広域フェーズに一様空間グリッド（セル = 2R）を使い、平均 O(n) で近傍のみ判定する。
+ */
+export function findCollidingPins(
+  pins: readonly Pin[],
+  tolerance = COLLISION_TOLERANCE,
+): Set<string> {
+  const matrices = solveWorldTransforms(pins)
+  const parentOf = new Map<string, string | null>()
+  for (const p of pins) parentOf.set(p.id, p.connection?.parentId ?? null)
+
+  interface Item {
+    id: string
+    parentId: string | null
+    obb: Obb
+  }
+  const items: Item[] = []
+  for (const [id, m] of matrices) {
+    items.push({ id, parentId: parentOf.get(id) ?? null, obb: obbFromMatrix(m) })
+  }
+
+  const cell = 2 * BOUNDING_RADIUS
+  const cellOf = (v: number) => Math.floor(v / cell)
+  const grid = new Map<string, number[]>()
+  items.forEach((it, i) => {
+    const key = `${cellOf(it.obb.c[0])},${cellOf(it.obb.c[1])},${cellOf(it.obb.c[2])}`
+    const arr = grid.get(key)
+    if (arr) arr.push(i)
+    else grid.set(key, [i])
+  })
+
+  const exempt = (a: Item, b: Item) =>
+    a.parentId === b.id || b.parentId === a.id || (a.parentId !== null && a.parentId === b.parentId)
+
+  const result = new Set<string>()
+  const maxDistSq = cell * cell
+  items.forEach((a, i) => {
+    const cx = cellOf(a.obb.c[0])
+    const cy = cellOf(a.obb.c[1])
+    const cz = cellOf(a.obb.c[2])
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const arr = grid.get(`${cx + dx},${cy + dy},${cz + dz}`)
+          if (!arr) continue
+          for (const j of arr) {
+            if (j <= i) continue // 各ペアを 1 回だけ
+            const b = items[j]
+            if (exempt(a, b)) continue
+            const ddx = a.obb.c[0] - b.obb.c[0]
+            const ddy = a.obb.c[1] - b.obb.c[1]
+            const ddz = a.obb.c[2] - b.obb.c[2]
+            if (ddx * ddx + ddy * ddy + ddz * ddz > maxDistSq) continue
+            if (obbIntersect(a.obb, b.obb, tolerance)) {
+              result.add(a.id)
+              result.add(b.id)
+            }
+          }
+        }
+      }
+    }
+  })
+  return result
+}
+
+/**
  * 親 parentId のソケット gripIndex に既定姿勢（roll/pitch）で子を置いたとき、
  * 干渉する既存ピンの id を返す（無ければ null）。
  * 除外: 親自身と、親の既存の子（= 同じハブに集まる兄弟）。

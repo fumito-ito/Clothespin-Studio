@@ -41,6 +41,8 @@ interface StudioState {
   /** true = 地面クリックでルートピンを配置するモード */
   placementMode: boolean
   hoverSocket: SocketRef | null
+  /** 干渉している全ピンを赤表示するか（FR-P7 全体ハイライト） */
+  showCollisions: boolean
   /** UI 言語（NFR-7）。localStorage に永続化 */
   lang: Lang
 
@@ -59,6 +61,7 @@ interface StudioState {
   setActiveColor: (id: string) => void
   setPlacementMode: (v: boolean) => void
   setHoverSocket: (ref: SocketRef | null) => void
+  setShowCollisions: (v: boolean) => void
   setLang: (lang: Lang) => void
 }
 
@@ -88,6 +91,7 @@ export const useStudio = create<StudioState>()(
       activeColorId: DEFAULT_COLOR_ID,
       placementMode: false,
       hoverSocket: null,
+      showCollisions: true,
       lang: initialLang(),
 
       addRootPin: (position) => {
@@ -207,6 +211,7 @@ export const useStudio = create<StudioState>()(
       },
       setPlacementMode: (v) => set({ placementMode: v }),
       setHoverSocket: (ref) => set({ hoverSocket: ref }),
+      setShowCollisions: (v) => set({ showCollisions: v }),
       setLang: (lang) => {
         set({ lang })
         try {

@@ -3,6 +3,7 @@ import { Matrix4 } from 'three'
 import {
   BOUNDING_RADIUS,
   collidingPinId,
+  findCollidingPins,
   obbFromMatrix,
   obbIntersect,
   placementCollidingPinId,
@@ -130,5 +131,48 @@ describe('placementCollidingPinId', () => {
   it('存在しない親 / 不正ソケットは null', () => {
     expect(placementCollidingPinId([root], 'nope', 4)).toBeNull()
     expect(placementCollidingPinId([root], 'root', 99)).toBeNull()
+  })
+})
+
+describe('findCollidingPins', () => {
+  const freeAt = (id: string, x: number, z = DIMENSIONS.height / 2): Pin => ({
+    id,
+    colorId: 'blue',
+    connection: null,
+    transform: { position: [x, 0, z], rotation: [0, 0, 0, 1] },
+  })
+
+  it('干渉が無ければ空集合', () => {
+    expect(findCollidingPins([freeAt('a', 0), freeAt('b', 200)]).size).toBe(0)
+  })
+
+  it('重なる 2 ピンは両方が集合に入る', () => {
+    const set = findCollidingPins([freeAt('a', 0), freeAt('b', 20)])
+    expect(set).toEqual(new Set(['a', 'b']))
+  })
+
+  it('親子（直接連結）は除外される', () => {
+    const pins: Pin[] = [
+      freeAt('root', 0),
+      { id: 'c', colorId: 'blue', connection: { parentId: 'root', gripIndex: 4, roll: 0 } },
+    ]
+    expect(findCollidingPins(pins).size).toBe(0)
+  })
+
+  it('兄弟（同じ親）は除外される', () => {
+    // 同じ親の 2 子はハブ近傍で OBB が重なりうるが、兄弟として除外
+    const pins: Pin[] = [
+      freeAt('root', 0),
+      { id: 'c0', colorId: 'blue', connection: { parentId: 'root', gripIndex: 0, roll: 0 } },
+      { id: 'c2', colorId: 'blue', connection: { parentId: 'root', gripIndex: 2, roll: 0 } },
+    ]
+    const set = findCollidingPins(pins)
+    expect(set.has('c0')).toBe(false)
+    expect(set.has('c2')).toBe(false)
+  })
+
+  it('離れた多数のピンは O(n) で干渉なし（グリッド広域フェーズ）', () => {
+    const pins = Array.from({ length: 200 }, (_, i) => freeAt(`p${i}`, i * 200))
+    expect(findCollidingPins(pins).size).toBe(0)
   })
 })

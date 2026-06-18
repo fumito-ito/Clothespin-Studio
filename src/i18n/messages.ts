@@ -33,6 +33,8 @@ const MESSAGES = {
   },
   save: { ja: '💾 保存', en: '💾 Save' },
   load: { ja: '📂 読込', en: '📂 Load' },
+  showCollisions: { ja: '干渉を表示', en: 'Show collisions' },
+  collisionCount: { ja: '⚠ {n} 個のピンが干渉', en: '⚠ {n} pins colliding' },
   helpLine1: {
     ja: 'ピンをクリック = 選択 / ソケット球クリック = 連結',
     en: 'Click pin = select / click socket = connect',
