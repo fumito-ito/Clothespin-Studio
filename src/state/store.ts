@@ -9,7 +9,6 @@ import type { Pin, Transform, Vec3 } from '../types'
 import { DIMENSIONS, allowedAngles, socketByIndex } from '../domain/clothespin'
 import { collectSubtree, occupiedSockets } from '../domain/graph'
 import { solveWorldTransforms } from '../domain/solve'
-import { placementCollidingPinId } from '../domain/collision'
 import { DEFAULT_COLOR_ID } from '../assets/palette'
 import type { Lang } from '../i18n/messages'
 
@@ -109,8 +108,7 @@ export const useStudio = create<StudioState>()(
         if (!socketByIndex(gripIndex)) return
         if (occupiedSockets(pins, parentId).has(gripIndex)) return
         if (!pins.some((p) => p.id === parentId)) return
-        // 干渉する配置はブロックする（FR-P7。ゴーストが赤で予告済み）
-        if (placementCollidingPinId(pins, parentId, gripIndex) !== null) return
+        // 干渉は赤ゴーストで警告するがブロックはしない（置いた後に roll/pitch で逃がせるため）
         const pin: Pin = {
           id: nanoid(8),
           colorId: activeColorId,
