@@ -6,7 +6,7 @@ import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
 import { buildBom } from '../domain/bom'
 import { computeBounds } from '../domain/bounds'
-import { findCollidingPins } from '../domain/collision'
+import { useCollidingPins } from '../state/useCollidingPins'
 import { COLOR_NAME_KEYS, useT } from '../i18n'
 import { redo, undo, useStudio } from '../state/store'
 import {
@@ -90,10 +90,8 @@ export function ControlPanel() {
   const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
   const bom = useMemo(() => buildBom(pins, DEFAULT_PALETTE), [pins])
   const bounds = useMemo(() => computeBounds(pins), [pins])
-  const collisionCount = useMemo(
-    () => (showCollisions ? findCollidingPins(pins).size : 0),
-    [pins, showCollisions],
-  )
+  // PinInstances と同じ集合を共有（pins ごとに 1 回だけ計算）
+  const collisionCount = useCollidingPins().size
   const cm = (mm: number) => (mm / 10).toFixed(1)
   const colorName = (colorId: string, fallback: string) => {
     const key = COLOR_NAME_KEYS[colorId]

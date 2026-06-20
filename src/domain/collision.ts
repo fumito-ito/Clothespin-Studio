@@ -186,9 +186,11 @@ export function collidingPinId(
  */
 export function findCollidingPins(
   pins: readonly Pin[],
-  tolerance = COLLISION_TOLERANCE,
+  opts: { matrices?: Map<string, Matrix4>; tolerance?: number } = {},
 ): Set<string> {
-  const matrices = solveWorldTransforms(pins)
+  const tolerance = opts.tolerance ?? COLLISION_TOLERANCE
+  // 呼び出し側が解決済みの行列を渡せば再計算しない（描画と共有）
+  const matrices = opts.matrices ?? solveWorldTransforms(pins)
   const parentOf = new Map<string, string | null>()
   for (const p of pins) parentOf.set(p.id, p.connection?.parentId ?? null)
 

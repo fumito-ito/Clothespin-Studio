@@ -9,7 +9,8 @@ import type { ThreeEvent } from '@react-three/fiber'
 import { socketByIndex } from '../domain/clothespin'
 import { childWorldMatrix, solveWorldTransforms } from '../domain/solve'
 import { occupiedSockets } from '../domain/graph'
-import { collidingPinId, findCollidingPins } from '../domain/collision'
+import { collidingPinId } from '../domain/collision'
+import { useCollidingPins } from '../state/useCollidingPins'
 import { useStudio } from '../state/store'
 import { DEFAULT_PALETTE, SPRING_COLOR } from '../assets/palette'
 import { SocketMarkers } from './SocketMarkers'
@@ -25,22 +26,18 @@ const HIGHLIGHT = new Color('#4a8fe7')
 const FALLBACK_HEX = '#888888'
 const GHOST_COLLIDE = '#e23b3b'
 const COLLIDE_COLOR = new Color('#e23b3b')
-const EMPTY_SET: ReadonlySet<string> = new Set()
 
 export function PinInstances() {
   const pins = useStudio((s) => s.pins)
   const selectedPinId = useStudio((s) => s.selectedPinId)
   const selectPin = useStudio((s) => s.selectPin)
 
-  const showCollisions = useStudio((s) => s.showCollisions)
   const matrices = useMemo(() => solveWorldTransforms(pins), [pins])
   const placed = useMemo(() => pins.filter((p) => matrices.has(p.id)), [pins, matrices])
 
-  // 全体ハイライト（FR-P7）: 干渉している全ピンを赤表示
-  const collidingSet = useMemo(
-    () => (showCollisions ? findCollidingPins(pins) : EMPTY_SET),
-    [pins, showCollisions],
-  )
+  // 全体ハイライト（FR-P7）: 干渉している全ピンを赤表示。
+  // 解決済み matrices を渡して再 solve を避け、結果は ControlPanel と共有する。
+  const collidingSet = useCollidingPins(matrices)
 
   // 容量は 2 冪で確保し、超えたら key で作り直す
   const capacity = Math.max(256, 2 ** Math.ceil(Math.log2(Math.max(1, placed.length))))
