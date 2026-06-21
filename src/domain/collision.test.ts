@@ -8,9 +8,8 @@ import {
   obbIntersect,
   placementCollidingPinId,
 } from './collision'
-import { DIMENSIONS } from './clothespin'
+import { DIMENSIONS, GRIP_SOCKETS } from './clothespin'
 import { childWorldMatrix, solveWorldTransforms } from './solve'
-import { GRIP_SOCKETS } from './clothespin'
 import type { Pin } from '../types'
 
 const at = (x: number, y = 0, z = 0) => new Matrix4().makeTranslation(x, y, z)

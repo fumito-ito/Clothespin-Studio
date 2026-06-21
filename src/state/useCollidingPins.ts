@@ -20,7 +20,10 @@ export function useCollidingPins(matrices?: Map<string, Matrix4>): ReadonlySet<s
   const pins = useStudio((s) => s.pins)
   const show = useStudio((s) => s.showCollisions)
   return useMemo(() => {
-    if (!show) return EMPTY
+    if (!show) {
+      cache.delete(pins) // 無効時は計算結果を保持しない（大規模シーンのメモリ解放）
+      return EMPTY
+    }
     const hit = cache.get(pins)
     if (hit) return hit
     const set = findCollidingPins(pins, { matrices })
