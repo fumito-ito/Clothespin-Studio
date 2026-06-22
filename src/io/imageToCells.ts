@@ -38,6 +38,7 @@ export async function imageToReliefCells(
   const bitmap = await createImageBitmap(file)
   try {
     const cols = Math.max(2, Math.round(options.widthTowers))
+    // タワー間隔の縦横比で補正し、真上から見たとき画像が歪まないようにする
     const aspectCorrection = DEFAULT_RELIEF_PARAMS.pitchX / DEFAULT_RELIEF_PARAMS.pitchY
     const rows = Math.max(2, Math.round((bitmap.height / bitmap.width) * cols * aspectCorrection))
 

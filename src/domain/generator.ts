@@ -1,11 +1,16 @@
 // レリーフ（高さマップ）ジェネレータの純ロジック。
 // 画像のセル格子（列・行・高さ・色）から、連結タワー群のピン配列を生成する。
 //
-// タワー単位（実機検証済み）:
-//   ルートを鼻先下向きに立て（R_y(+90°): ローカル −X → +Z）、
-//   g0/g1（ハンドル先端）を交互に連結すると、±30° のジグザグで
-//   ほぼ直立（約 58mm/段・厚み 12mm の平面内）のチェーンになる。
-//   ※ g4 連続は回転が累積して螺旋になり、g2/g3 は口が一点に集まるため不可。
+// タワー単位（実機計測で確定）:
+//   ルートを鼻先下向きに立て（R_y(+90°): ローカル −X → +Z）、g0（上ハンドル先端）を
+//   連続連結する。クロソピンの連結幾何では「完全な垂直スタック」は作れず、どの連結でも
+//   高さに比例して横へドリフトする。連続 g0 は平面内（厚み Y≈12mm を保つ）で最も背が高く
+//   ドリフトも比較的小さい、という計測結果からこれを採用。
+//   ※ g0/g1 交互はドリフト増、g2/g3 は段が重なる、リング連結は面外に螺旋、で不可。
+//
+// 横ドリフトはあるが、全タワーが同じ向き・同量で傾く（平行）ため、隣接タワーの X 間隔は
+// 全高さで一定（= pitchX）。よって衝突回避に必要なのは累積ドリフトではなく「各段 1 ピン分の幅」
+// だけで、実測では pitchX ≥ 55mm / pitchY ≥ 18mm で高さに依らず干渉しない（余裕を見て既定値を採用）。
 
 import type { PaletteColor, Pin, Quat } from '../types'
 
@@ -18,23 +23,45 @@ export interface ReliefCell {
 }
 
 export interface ReliefParams {
-  /** タワー間隔 X (mm)。ジグザグ面の方向 */
+  /** タワー間隔 X (mm)。ドリフト方向 */
   pitchX: number
   /** タワー間隔 Y (mm)。ピン厚み方向 */
   pitchY: number
 }
 
-export const DEFAULT_RELIEF_PARAMS: ReliefParams = { pitchX: 65, pitchY: 20 }
+/** 既定のタワー間隔（実測の最小 55/18mm に余裕を持たせた値）。隣接タワーは干渉しない */
+export const DEFAULT_RELIEF_PARAMS: ReliefParams = { pitchX: 60, pitchY: 24 }
 
 /** R_y(+90°): ルートの鼻先を下に向け、ハンドル延長（チェーン方向）を上に向ける */
 const TOWER_ROOT_ROTATION: Quat = [0, Math.SQRT1_2, 0, Math.SQRT1_2]
 /** 鼻先（ローカル +X=30mm）が接地する高さ */
 const TOWER_ROOT_Z = 31
+/** タワーを伸ばすソケット（上ハンドル先端） */
+const TOWER_GRIP = 0
+
+/** 指定位置・高さの 1 タワー分のピンを生成する（id 接頭辞 prefix） */
+function towerPins(prefix: string, colorId: string, x: number, y: number, height: number): Pin[] {
+  const pins: Pin[] = [
+    {
+      id: prefix,
+      colorId,
+      connection: null,
+      transform: { position: [x, y, TOWER_ROOT_Z], rotation: TOWER_ROOT_ROTATION },
+    },
+  ]
+  let parentId = prefix
+  for (let i = 1; i < height; i++) {
+    const id = `${prefix}-${i}`
+    pins.push({ id, colorId, connection: { parentId, gripIndex: TOWER_GRIP, roll: 0 } })
+    parentId = id
+  }
+  return pins
+}
 
 /**
  * セル格子から連結タワー群を生成する。
  * 画像座標（col→+X, row→−Y）でドメイン平面に配置し、全体を中心寄せする。
- * id は決定的（`t{col}x{row}-{i}`）。生成結果はモデル全体を置き換える想定。
+ * id は決定的（`t{col}x{row}` + 段番号）。生成結果はモデル全体を置き換える想定。
  */
 export function buildReliefPins(
   cells: readonly ReliefCell[],
@@ -42,6 +69,8 @@ export function buildReliefPins(
 ): Pin[] {
   const active = cells.filter((c) => c.height > 0)
   if (active.length === 0) return []
+
+  const pitch = params
 
   const minCol = Math.min(...active.map((c) => c.col))
   const maxCol = Math.max(...active.map((c) => c.col))
@@ -52,26 +81,9 @@ export function buildReliefPins(
 
   const pins: Pin[] = []
   for (const cell of active) {
-    const x = (cell.col - centerCol) * params.pitchX
-    const y = -(cell.row - centerRow) * params.pitchY
-    const rootId = `t${cell.col}x${cell.row}`
-    pins.push({
-      id: rootId,
-      colorId: cell.colorId,
-      connection: null,
-      transform: { position: [x, y, TOWER_ROOT_Z], rotation: TOWER_ROOT_ROTATION },
-    })
-    let parentId = rootId
-    for (let i = 1; i < cell.height; i++) {
-      const id = `${rootId}-${i}`
-      pins.push({
-        id,
-        colorId: cell.colorId,
-        // g0/g1 交互で傾きを相殺する（直立チェーン）
-        connection: { parentId, gripIndex: i % 2 === 1 ? 0 : 1, roll: 0 },
-      })
-      parentId = id
-    }
+    const x = (cell.col - centerCol) * pitch.pitchX
+    const y = -(cell.row - centerRow) * pitch.pitchY
+    pins.push(...towerPins(`t${cell.col}x${cell.row}`, cell.colorId, x, y, cell.height))
   }
   return pins
 }
