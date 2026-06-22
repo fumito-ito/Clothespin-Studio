@@ -271,4 +271,35 @@ if (import.meta.env.DEV) {
     useStudio.temporal.getState().clear()
     return count
   }
+
+  // 画像→レリーフ生成の動作確認用（プレビュー環境では input.files を設定できないため、
+  // 合成画像を実パイプラインに通してモデルを生成する）。返り値は生成ピン数。
+  w.__genSynthetic = async (widthTowers = 16, maxHeight = 6, invert = false) => {
+    const [{ imageToReliefCells }, { buildReliefPins }, { DEFAULT_PALETTE }] = await Promise.all([
+      import('../io/imageToCells'),
+      import('../domain/generator'),
+      import('../assets/palette'),
+    ])
+    const c = document.createElement('canvas')
+    c.width = 40
+    c.height = 40
+    const ctx = c.getContext('2d')!
+    const grad = ctx.createLinearGradient(0, 0, 40, 40)
+    grad.addColorStop(0, '#0C48A3')
+    grad.addColorStop(1, '#ffffff')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, 40, 40)
+    ctx.fillStyle = '#000000'
+    ctx.beginPath()
+    ctx.arc(20, 20, 9, 0, Math.PI * 2)
+    ctx.fill()
+    const bin = atob(c.toDataURL('image/png').split(',')[1])
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    const file = new File([bytes], 'synthetic.png', { type: 'image/png' })
+    const result = await imageToReliefCells(file, { widthTowers, maxHeight, invert }, DEFAULT_PALETTE)
+    useStudio.setState({ pins: buildReliefPins(result.cells), selectedPinId: null, placementMode: false })
+    useStudio.temporal.getState().clear()
+    return { cols: result.cols, rows: result.rows, pinTotal: result.pinTotal }
+  }
 }
