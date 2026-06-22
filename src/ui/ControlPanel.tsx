@@ -6,6 +6,7 @@ import { DEFAULT_PALETTE } from '../assets/palette'
 import { allowedAngles, socketByIndex } from '../domain/clothespin'
 import { buildBom } from '../domain/bom'
 import { computeBounds } from '../domain/bounds'
+import { useCollidingPins } from '../state/useCollidingPins'
 import { COLOR_NAME_KEYS, useT } from '../i18n'
 import { redo, undo, useStudio } from '../state/store'
 import {
@@ -46,6 +47,8 @@ export function ControlPanel() {
   const stepPitch = useStudio((s) => s.stepPitch)
   const lang = useStudio((s) => s.lang)
   const setLang = useStudio((s) => s.setLang)
+  const showCollisions = useStudio((s) => s.showCollisions)
+  const setShowCollisions = useStudio((s) => s.setShowCollisions)
   const t = useT()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [genOpen, setGenOpen] = useState(false)
@@ -54,6 +57,8 @@ export function ControlPanel() {
   const socket = selected?.connection ? socketByIndex(selected.connection.gripIndex) : undefined
   const bom = useMemo(() => buildBom(pins, DEFAULT_PALETTE), [pins])
   const bounds = useMemo(() => computeBounds(pins), [pins])
+  // PinInstances と同じ集合を共有（pins ごとに 1 回だけ計算）
+  const collisionCount = useCollidingPins().size
   const cm = (mm: number) => (mm / 10).toFixed(1)
   const colorName = (colorId: string, fallback: string) => {
     const key = COLOR_NAME_KEYS[colorId]
@@ -114,6 +119,23 @@ export function ControlPanel() {
         <Btn onClick={() => frameView('side')}>{t('viewSide')}</Btn>
         <Btn onClick={() => frameView('iso')}>{t('viewIso')}</Btn>
         <Btn onClick={() => frameView()}>{t('viewFit')}</Btn>
+      </div>
+
+      {/* 干渉の全体ハイライト（FR-P7） */}
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: 'block', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={showCollisions}
+            onChange={(e) => setShowCollisions(e.target.checked)}
+          />{' '}
+          {t('showCollisions')}
+        </label>
+        {showCollisions && collisionCount > 0 && (
+          <div style={{ color: '#e23b3b', fontSize: 12 }}>
+            {t('collisionCount', { n: collisionCount })}
+          </div>
+        )}
       </div>
       {placementMode && (
         <div style={{ color: 'var(--color-accent)', fontSize: 12, marginBottom: 8 }}>
