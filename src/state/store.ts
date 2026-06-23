@@ -302,4 +302,98 @@ if (import.meta.env.DEV) {
     useStudio.temporal.getState().clear()
     return { cols: result.cols, rows: result.rows, pinTotal: result.pinTotal }
   }
+
+  // ルールベース生成アセンブリの可視化デモ（docs/07）。目標ボクセル集合を種から
+  // 最良優先で充填し、1 つの連結木（干渉なし）を生成する。shape: 'sphere'|'pyramid'
+  w.__grow = async (shape = 'sphere', V = 45) => {
+    const [{ childWorldMatrix }, clothespin, collision] = await Promise.all([
+      import('../domain/solve'),
+      import('../domain/clothespin'),
+      import('../domain/collision'),
+    ])
+    const { GRIP_SOCKETS, allowedAngles } = clothespin
+    const { obbFromMatrix, obbIntersect, COLLISION_TOLERANCE } = collision
+    const M4 = (await import('three')).Matrix4
+
+    type Mv = { s: (typeof GRIP_SOCKETS)[number]; roll: number; pitch: number }
+    const catalog: Mv[] = []
+    for (const s of GRIP_SOCKETS)
+      for (const roll of allowedAngles(s.rollMaxAbsDeg)) {
+        const pitches = s.pitchMaxAbsDeg === null ? [0] : allowedAngles(s.pitchMaxAbsDeg)
+        for (const pitch of pitches) catalog.push({ s, roll, pitch })
+      }
+
+    const target = new Set<string>()
+    if (shape === 'pyramid') {
+      const n = 9
+      for (let i = 0; i < n; i++)
+        for (let j = 0; j < n; j++) {
+          const h = 1 + Math.min(i, n - 1 - i, j, n - 1 - j)
+          for (let k = 0; k < h; k++) target.add(`${i},${j},${k}`)
+        }
+    } else {
+      const R = 4
+      for (let i = -R; i <= R; i++)
+        for (let j = -R; j <= R; j++)
+          for (let k = -R; k <= R; k++)
+            if (i * i + j * j + k * k <= R * R) target.add(`${i + R},${j + R},${k + R}`)
+    }
+    const seed = shape === 'pyramid' ? '4,4,0' : '4,4,4'
+    const [si, sj, sk] = seed.split(',').map(Number)
+    const colors = ['blue', 'white', 'warmgray']
+    type P = { m: InstanceType<typeof M4>; obb: ReturnType<typeof obbFromMatrix>; occ: Set<number>; pin: Pin }
+    const sm = new M4().makeTranslation(si * V, sj * V, sk * V)
+    const placed: P[] = [
+      {
+        m: sm,
+        obb: obbFromMatrix(sm),
+        occ: new Set(),
+        pin: { id: 'p0', colorId: 'blue', connection: null, transform: { position: [si * V, sj * V, sk * V], rotation: [0, 0, 0, 1] } },
+      },
+    ]
+    const covered = new Set([seed])
+    const vkey = (m: InstanceType<typeof M4>) =>
+      `${Math.round(m.elements[12] / V)},${Math.round(m.elements[13] / V)},${Math.round(m.elements[14] / V)}`
+    let nid = 1
+    for (let iter = 0; iter < target.size * 5; iter++) {
+      let best: { pi: number; mv: Mv; m: InstanceType<typeof M4>; obb: P['obb']; vk: string } | null = null
+      outer: for (let pi = 0; pi < placed.length; pi++) {
+        const par = placed[pi]
+        for (const mv of catalog) {
+          if (par.occ.has(mv.s.index)) continue
+          const m = childWorldMatrix(par.m, mv.s, mv.roll, mv.pitch)
+          const vk = vkey(m)
+          if (!target.has(vk) || covered.has(vk)) continue
+          const obb = obbFromMatrix(m)
+          let bad = false
+          for (let k = 0; k < placed.length; k++) {
+            if (k !== pi && obbIntersect(obb, placed[k].obb, COLLISION_TOLERANCE)) {
+              bad = true
+              break
+            }
+          }
+          if (bad) continue
+          best = { pi, mv, m, obb, vk }
+          break outer
+        }
+      }
+      if (!best) break
+      placed[best.pi].occ.add(best.mv.s.index)
+      placed.push({
+        m: best.m,
+        obb: best.obb,
+        occ: new Set(),
+        pin: {
+          id: 'p' + nid,
+          colorId: colors[nid % 3],
+          connection: { parentId: placed[best.pi].pin.id, gripIndex: best.mv.s.index, roll: best.mv.roll, pitch: best.mv.pitch },
+        },
+      })
+      nid++
+      covered.add(best.vk)
+    }
+    useStudio.setState({ pins: placed.map((p) => p.pin), selectedPinId: null, placementMode: false })
+    useStudio.temporal.getState().clear()
+    return { shape, pins: placed.length, covered: covered.size, target: target.size }
+  }
 }
