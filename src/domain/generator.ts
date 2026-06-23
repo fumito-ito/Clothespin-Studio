@@ -88,6 +88,36 @@ export function buildReliefPins(
   return pins
 }
 
+/**
+ * 画像セル（高さ場）→ ボクセル目標（"i,j,k" → colorId）+ 種ボクセル。
+ * ルールベース生成アセンブリ（grow, docs/07）の入力。col→i, row→j, 高さ→k。
+ * 種は中心に最も近い充填セルの底（k=0）。
+ */
+export function cellsToVoxels(cells: readonly ReliefCell[]): {
+  voxels: Map<string, string>
+  seed: string | undefined
+} {
+  const active = cells.filter((c) => c.height > 0)
+  const voxels = new Map<string, string>()
+  for (const c of active) {
+    for (let k = 0; k < c.height; k++) voxels.set(`${c.col},${c.row},${k}`, c.colorId)
+  }
+  if (active.length === 0) return { voxels, seed: undefined }
+
+  const cx = (Math.min(...active.map((c) => c.col)) + Math.max(...active.map((c) => c.col))) / 2
+  const cy = (Math.min(...active.map((c) => c.row)) + Math.max(...active.map((c) => c.row))) / 2
+  let seedCell = active[0]
+  let bestD = Infinity
+  for (const c of active) {
+    const d = (c.col - cx) ** 2 + (c.row - cy) ** 2
+    if (d < bestD) {
+      bestD = d
+      seedCell = c
+    }
+  }
+  return { voxels, seed: `${seedCell.col},${seedCell.row},0` }
+}
+
 /** sRGB 値の相対輝度（0–255） */
 export function luminance(r: number, g: number, b: number): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b

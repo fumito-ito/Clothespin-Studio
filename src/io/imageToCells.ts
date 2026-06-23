@@ -2,13 +2,7 @@
 // 縮小サンプリング → 透明セル除外 → 輝度→高さ / 最近傍パレット色に量子化。
 
 import type { PaletteColor } from '../types'
-import {
-  DEFAULT_RELIEF_PARAMS,
-  luminance,
-  luminanceToHeight,
-  nearestColorId,
-  type ReliefCell,
-} from '../domain/generator'
+import { luminance, luminanceToHeight, nearestColorId, type ReliefCell } from '../domain/generator'
 
 export interface ImageReliefOptions {
   /** 横方向のタワー数 */
@@ -38,9 +32,8 @@ export async function imageToReliefCells(
   const bitmap = await createImageBitmap(file)
   try {
     const cols = Math.max(2, Math.round(options.widthTowers))
-    // タワー間隔の縦横比で補正し、真上から見たとき画像が歪まないようにする
-    const aspectCorrection = DEFAULT_RELIEF_PARAMS.pitchX / DEFAULT_RELIEF_PARAMS.pitchY
-    const rows = Math.max(2, Math.round((bitmap.height / bitmap.width) * cols * aspectCorrection))
+    // grow は立方ボクセル（X=Y 等間隔）で配置するので、行数は画像のアスペクト比そのまま
+    const rows = Math.max(2, Math.round((bitmap.height / bitmap.width) * cols))
 
     const canvas = document.createElement('canvas')
     canvas.width = cols

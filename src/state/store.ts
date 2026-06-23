@@ -272,14 +272,16 @@ if (import.meta.env.DEV) {
     return count
   }
 
-  // 画像→レリーフ生成の動作確認用（プレビュー環境では input.files を設定できないため、
-  // 合成画像を実パイプラインに通してモデルを生成する）。返り値は生成ピン数。
+  // 画像→連結アセンブリ生成の動作確認用（プレビュー環境では input.files を設定できないため、
+  // 合成画像を実パイプライン imageToReliefCells→cellsToVoxels→growAssembly に通す）。
   w.__genSynthetic = async (widthTowers = 16, maxHeight = 6, invert = false) => {
-    const [{ imageToReliefCells }, { buildReliefPins }, { DEFAULT_PALETTE }] = await Promise.all([
-      import('../io/imageToCells'),
-      import('../domain/generator'),
-      import('../assets/palette'),
-    ])
+    const [{ imageToReliefCells }, { cellsToVoxels }, { growAssembly }, { DEFAULT_PALETTE }] =
+      await Promise.all([
+        import('../io/imageToCells'),
+        import('../domain/generator'),
+        import('../domain/grow'),
+        import('../assets/palette'),
+      ])
     const c = document.createElement('canvas')
     c.width = 40
     c.height = 40
@@ -298,102 +300,42 @@ if (import.meta.env.DEV) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
     const file = new File([bytes], 'synthetic.png', { type: 'image/png' })
     const result = await imageToReliefCells(file, { widthTowers, maxHeight, invert }, DEFAULT_PALETTE)
-    useStudio.setState({ pins: buildReliefPins(result.cells), selectedPinId: null, placementMode: false })
+    const { voxels, seed } = cellsToVoxels(result.cells)
+    const r = growAssembly(voxels, 45, seed)
+    useStudio.setState({ pins: r.pins, selectedPinId: null, placementMode: false })
     useStudio.temporal.getState().clear()
-    return { cols: result.cols, rows: result.rows, pinTotal: result.pinTotal }
+    return { cols: result.cols, rows: result.rows, covered: r.covered, target: r.target, pins: r.pins.length }
   }
 
   // ルールベース生成アセンブリの可視化デモ（docs/07）。目標ボクセル集合を種から
-  // 最良優先で充填し、1 つの連結木（干渉なし）を生成する。shape: 'sphere'|'pyramid'
+  // 充填し、1 つの連結木（干渉なし）を生成する。shape: 'sphere'|'pyramid'
   w.__grow = async (shape = 'sphere', V = 45) => {
-    const [{ childWorldMatrix }, clothespin, collision] = await Promise.all([
-      import('../domain/solve'),
-      import('../domain/clothespin'),
-      import('../domain/collision'),
-    ])
-    const { GRIP_SOCKETS, allowedAngles } = clothespin
-    const { obbFromMatrix, obbIntersect, COLLISION_TOLERANCE } = collision
-    const M4 = (await import('three')).Matrix4
-
-    type Mv = { s: (typeof GRIP_SOCKETS)[number]; roll: number; pitch: number }
-    const catalog: Mv[] = []
-    for (const s of GRIP_SOCKETS)
-      for (const roll of allowedAngles(s.rollMaxAbsDeg)) {
-        const pitches = s.pitchMaxAbsDeg === null ? [0] : allowedAngles(s.pitchMaxAbsDeg)
-        for (const pitch of pitches) catalog.push({ s, roll, pitch })
-      }
-
-    const target = new Set<string>()
+    const { growAssembly } = await import('../domain/grow')
+    const colors = ['blue', 'white', 'warmgray']
+    const voxels = new Map<string, string>()
+    let seed: string
     if (shape === 'pyramid') {
       const n = 9
       for (let i = 0; i < n; i++)
         for (let j = 0; j < n; j++) {
           const h = 1 + Math.min(i, n - 1 - i, j, n - 1 - j)
-          for (let k = 0; k < h; k++) target.add(`${i},${j},${k}`)
+          for (let k = 0; k < h; k++) voxels.set(`${i},${j},${k}`, colors[(i + j + k) % 3])
         }
+      seed = '4,4,0'
     } else {
       const R = 4
       for (let i = -R; i <= R; i++)
         for (let j = -R; j <= R; j++)
           for (let k = -R; k <= R; k++)
-            if (i * i + j * j + k * k <= R * R) target.add(`${i + R},${j + R},${k + R}`)
+            if (i * i + j * j + k * k <= R * R)
+              voxels.set(`${i + R},${j + R},${k + R}`, colors[(i + j + k + 3 * R) % 3])
+      seed = '4,4,4'
     }
-    const seed = shape === 'pyramid' ? '4,4,0' : '4,4,4'
-    const [si, sj, sk] = seed.split(',').map(Number)
-    const colors = ['blue', 'white', 'warmgray']
-    type P = { m: InstanceType<typeof M4>; obb: ReturnType<typeof obbFromMatrix>; occ: Set<number>; pin: Pin }
-    const sm = new M4().makeTranslation(si * V, sj * V, sk * V)
-    const placed: P[] = [
-      {
-        m: sm,
-        obb: obbFromMatrix(sm),
-        occ: new Set(),
-        pin: { id: 'p0', colorId: 'blue', connection: null, transform: { position: [si * V, sj * V, sk * V], rotation: [0, 0, 0, 1] } },
-      },
-    ]
-    const covered = new Set([seed])
-    const vkey = (m: InstanceType<typeof M4>) =>
-      `${Math.round(m.elements[12] / V)},${Math.round(m.elements[13] / V)},${Math.round(m.elements[14] / V)}`
-    let nid = 1
-    for (let iter = 0; iter < target.size * 5; iter++) {
-      let best: { pi: number; mv: Mv; m: InstanceType<typeof M4>; obb: P['obb']; vk: string } | null = null
-      outer: for (let pi = 0; pi < placed.length; pi++) {
-        const par = placed[pi]
-        for (const mv of catalog) {
-          if (par.occ.has(mv.s.index)) continue
-          const m = childWorldMatrix(par.m, mv.s, mv.roll, mv.pitch)
-          const vk = vkey(m)
-          if (!target.has(vk) || covered.has(vk)) continue
-          const obb = obbFromMatrix(m)
-          let bad = false
-          for (let k = 0; k < placed.length; k++) {
-            if (k !== pi && obbIntersect(obb, placed[k].obb, COLLISION_TOLERANCE)) {
-              bad = true
-              break
-            }
-          }
-          if (bad) continue
-          best = { pi, mv, m, obb, vk }
-          break outer
-        }
-      }
-      if (!best) break
-      placed[best.pi].occ.add(best.mv.s.index)
-      placed.push({
-        m: best.m,
-        obb: best.obb,
-        occ: new Set(),
-        pin: {
-          id: 'p' + nid,
-          colorId: colors[nid % 3],
-          connection: { parentId: placed[best.pi].pin.id, gripIndex: best.mv.s.index, roll: best.mv.roll, pitch: best.mv.pitch },
-        },
-      })
-      nid++
-      covered.add(best.vk)
-    }
-    useStudio.setState({ pins: placed.map((p) => p.pin), selectedPinId: null, placementMode: false })
+    const t0 = performance.now()
+    const r = growAssembly(voxels, V, seed)
+    const ms = Math.round(performance.now() - t0)
+    useStudio.setState({ pins: r.pins, selectedPinId: null, placementMode: false })
     useStudio.temporal.getState().clear()
-    return { shape, pins: placed.length, covered: covered.size, target: target.size }
+    return { shape, pins: r.pins.length, covered: r.covered, target: r.target, ms }
   }
 }

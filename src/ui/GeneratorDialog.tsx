@@ -4,8 +4,12 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { DEFAULT_PALETTE } from '../assets/palette'
-import { buildReliefPins } from '../domain/generator'
+import { cellsToVoxels } from '../domain/generator'
+import { growAssembly } from '../domain/grow'
 import { imageToReliefCells, type ImageReliefResult } from '../io/imageToCells'
+
+/** 立方ボクセルの一辺 (mm)。被覆率実測で 45mm が好結果 */
+const VOXEL_MM = 45
 import { useT } from '../i18n'
 import { t as tNow } from '../i18n'
 import { useStudio } from '../state/store'
@@ -81,11 +85,10 @@ export function GeneratorDialog({ onClose }: Props) {
     if (!result || tooMany) return
     const { pins } = useStudio.getState()
     if (pins.length > 0 && !window.confirm(tNow('confirmReplace', { n: pins.length }))) return
-    useStudio.setState({
-      pins: buildReliefPins(result.cells),
-      selectedPinId: null,
-      placementMode: false,
-    })
+    // 画像セル（高さ場）→ ボクセル目標 → 連結アセンブリを成長生成（docs/07）
+    const { voxels, seed } = cellsToVoxels(result.cells)
+    const grown = growAssembly(voxels, VOXEL_MM, seed)
+    useStudio.setState({ pins: grown.pins, selectedPinId: null, placementMode: false })
     useStudio.temporal.getState().clear()
     onClose()
     requestAnimationFrame(() => frameView('iso'))
