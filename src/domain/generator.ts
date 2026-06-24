@@ -1,91 +1,15 @@
-// レリーフ（高さマップ）ジェネレータの純ロジック。
-// 画像のセル格子（列・行・高さ・色）から、連結タワー群のピン配列を生成する。
-//
-// タワー単位（実機計測で確定）:
-//   ルートを鼻先下向きに立て（R_y(+90°): ローカル −X → +Z）、g0（上ハンドル先端）を
-//   連続連結する。クロソピンの連結幾何では「完全な垂直スタック」は作れず、どの連結でも
-//   高さに比例して横へドリフトする。連続 g0 は平面内（厚み Y≈12mm を保つ）で最も背が高く
-//   ドリフトも比較的小さい、という計測結果からこれを採用。
-//   ※ g0/g1 交互はドリフト増、g2/g3 は段が重なる、リング連結は面外に螺旋、で不可。
-//
-// 横ドリフトはあるが、全タワーが同じ向き・同量で傾く（平行）ため、隣接タワーの X 間隔は
-// 全高さで一定（= pitchX）。よって衝突回避に必要なのは累積ドリフトではなく「各段 1 ピン分の幅」
-// だけで、実測では pitchX ≥ 55mm / pitchY ≥ 18mm で高さに依らず干渉しない（余裕を見て既定値を採用）。
+// 画像（高さ場）の量子化とボクセル目標化（ルールベース生成アセンブリ grow への入力, docs/07）。
+// 縮小サンプリングされた画像セル（列・行・高さ・色）を、輝度→高さ / 最近傍パレット色に量子化し、
+// 立体ボクセル目標（"i,j,k" → colorId）+ 種ボクセルへ変換する。
 
-import type { PaletteColor, Pin, Quat } from '../types'
+import type { PaletteColor } from '../types'
 
 export interface ReliefCell {
   col: number
   row: number
-  /** タワーの段数（ピン本数）。0 = タワーなし */
+  /** 高さ（段数）。0 = セルなし */
   height: number
   colorId: string
-}
-
-export interface ReliefParams {
-  /** タワー間隔 X (mm)。ドリフト方向 */
-  pitchX: number
-  /** タワー間隔 Y (mm)。ピン厚み方向 */
-  pitchY: number
-}
-
-/** 既定のタワー間隔（実測の最小 55/18mm に余裕を持たせた値）。隣接タワーは干渉しない */
-export const DEFAULT_RELIEF_PARAMS: ReliefParams = { pitchX: 60, pitchY: 24 }
-
-/** R_y(+90°): ルートの鼻先を下に向け、ハンドル延長（チェーン方向）を上に向ける */
-const TOWER_ROOT_ROTATION: Quat = [0, Math.SQRT1_2, 0, Math.SQRT1_2]
-/** 鼻先（ローカル +X=30mm）が接地する高さ */
-const TOWER_ROOT_Z = 31
-/** タワーを伸ばすソケット（上ハンドル先端） */
-const TOWER_GRIP = 0
-
-/** 指定位置・高さの 1 タワー分のピンを生成する（id 接頭辞 prefix） */
-function towerPins(prefix: string, colorId: string, x: number, y: number, height: number): Pin[] {
-  const pins: Pin[] = [
-    {
-      id: prefix,
-      colorId,
-      connection: null,
-      transform: { position: [x, y, TOWER_ROOT_Z], rotation: TOWER_ROOT_ROTATION },
-    },
-  ]
-  let parentId = prefix
-  for (let i = 1; i < height; i++) {
-    const id = `${prefix}-${i}`
-    pins.push({ id, colorId, connection: { parentId, gripIndex: TOWER_GRIP, roll: 0 } })
-    parentId = id
-  }
-  return pins
-}
-
-/**
- * セル格子から連結タワー群を生成する。
- * 画像座標（col→+X, row→−Y）でドメイン平面に配置し、全体を中心寄せする。
- * id は決定的（`t{col}x{row}` + 段番号）。生成結果はモデル全体を置き換える想定。
- */
-export function buildReliefPins(
-  cells: readonly ReliefCell[],
-  params: ReliefParams = DEFAULT_RELIEF_PARAMS,
-): Pin[] {
-  const active = cells.filter((c) => c.height > 0)
-  if (active.length === 0) return []
-
-  const pitch = params
-
-  const minCol = Math.min(...active.map((c) => c.col))
-  const maxCol = Math.max(...active.map((c) => c.col))
-  const minRow = Math.min(...active.map((c) => c.row))
-  const maxRow = Math.max(...active.map((c) => c.row))
-  const centerCol = (minCol + maxCol) / 2
-  const centerRow = (minRow + maxRow) / 2
-
-  const pins: Pin[] = []
-  for (const cell of active) {
-    const x = (cell.col - centerCol) * pitch.pitchX
-    const y = -(cell.row - centerRow) * pitch.pitchY
-    pins.push(...towerPins(`t${cell.col}x${cell.row}`, cell.colorId, x, y, cell.height))
-  }
-  return pins
 }
 
 /**

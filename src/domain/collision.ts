@@ -10,8 +10,8 @@
 
 import { Matrix4 } from 'three'
 import type { Pin, Vec3 } from '../types'
-import { DIMENSIONS, socketByIndex } from './clothespin'
-import { childWorldMatrix, solveWorldTransforms } from './solve'
+import { DIMENSIONS } from './clothespin'
+import { solveWorldTransforms } from './solve'
 
 /** ピン OBB の半径（バウンディングボックスの半対角）。広域フェーズの球判定に使う */
 const HALF: Vec3 = [DIMENSIONS.length / 2, DIMENSIONS.thickness / 2, DIMENSIONS.height / 2]
@@ -246,29 +246,4 @@ export function findCollidingPins(
     }
   })
   return result
-}
-
-/**
- * 親 parentId のソケット gripIndex に既定姿勢（roll/pitch）で子を置いたとき、
- * 干渉する既存ピンの id を返す（無ければ null）。
- * 除外: 親自身と、親の既存の子（= 同じハブに集まる兄弟）。
- */
-export function placementCollidingPinId(
-  pins: readonly Pin[],
-  parentId: string,
-  gripIndex: number,
-  roll = 0,
-  pitch = 0,
-): string | null {
-  const socket = socketByIndex(gripIndex)
-  if (!socket) return null
-  const matrices = solveWorldTransforms(pins)
-  const parentM = matrices.get(parentId)
-  if (!parentM) return null
-  const candidate = childWorldMatrix(parentM, socket, roll, pitch)
-  const exclude = new Set<string>([parentId])
-  for (const p of pins) {
-    if (p.connection?.parentId === parentId) exclude.add(p.id)
-  }
-  return collidingPinId(candidate, matrices, exclude)
 }

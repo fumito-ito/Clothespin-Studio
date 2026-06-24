@@ -100,7 +100,9 @@
 ### 実装メモ
 - 立方ボクセル一辺は既定 `45mm`（被覆率実測で好結果。`GeneratorDialog.VOXEL_MM`）。
 - 連結は木構造で保証、干渉は OBB×SAT をハード制約に（既存 `collision.ts` 流用）。
-- 旧レリーフ（`buildReliefPins`・非連結）は当面残置（standalone 関数・テストあり）だが UI 非使用。
+- 旧レリーフ生成（`buildReliefPins` 等・非連結タワー）は **削除済み**（`growAssembly` に置換）。
+  `generator.ts` には画像量子化（`luminance`/`luminanceToHeight`/`nearestColorId`）と
+  `cellsToVoxels`（高さ場→ボクセル目標）のみ残す。
 
 ## 8. 出典
 

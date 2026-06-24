@@ -6,10 +6,8 @@ import {
   findCollidingPins,
   obbFromMatrix,
   obbIntersect,
-  placementCollidingPinId,
 } from './collision'
-import { DIMENSIONS, GRIP_SOCKETS } from './clothespin'
-import { childWorldMatrix, solveWorldTransforms } from './solve'
+import { DIMENSIONS } from './clothespin'
 import type { Pin } from '../types'
 
 const at = (x: number, y = 0, z = 0) => new Matrix4().makeTranslation(x, y, z)
@@ -88,48 +86,6 @@ describe('collidingPinId', () => {
     const near = at(2 * BOUNDING_RADIUS - 5, 0, 0)
     // 距離 < 2R だが OBB は長さ方向 60 で実際は分離（67 > 60）→ false で正しい
     expect(collidingPinId(near, matrices, new Set())).toBeNull()
-  })
-})
-
-describe('placementCollidingPinId', () => {
-  const root: Pin = {
-    id: 'root',
-    colorId: 'blue',
-    connection: null,
-    transform: { position: [0, 0, DIMENSIONS.height / 2], rotation: [0, 0, 0, 1] },
-  }
-
-  it('他に何も無ければ干渉なし', () => {
-    expect(placementCollidingPinId([root], 'root', 4)).toBeNull()
-  })
-
-  it('子の既定姿勢と同じ位置に自由ピンがあれば干渉する', () => {
-    // root の g4 子の既定ワールド姿勢を先回りで占有するピンを置く
-    const g4 = GRIP_SOCKETS[4]
-    const m = solveWorldTransforms([root]).get('root')!
-    const childM = childWorldMatrix(m, g4, 0, 0)
-    const pos = [childM.elements[12], childM.elements[13], childM.elements[14]] as [
-      number,
-      number,
-      number,
-    ]
-    const blocker: Pin = {
-      id: 'blocker',
-      colorId: 'white',
-      connection: null,
-      transform: { position: pos, rotation: [0, 0, 0, 1] },
-    }
-    expect(placementCollidingPinId([root, blocker], 'root', 4)).toBe('blocker')
-  })
-
-  it('親は除外される（接合部の必然的な重なりを誤検出しない）', () => {
-    // root だけに対して g4 へ置く → 親 root とは必ず接触するが除外され null
-    expect(placementCollidingPinId([root], 'root', 4)).toBeNull()
-  })
-
-  it('存在しない親 / 不正ソケットは null', () => {
-    expect(placementCollidingPinId([root], 'nope', 4)).toBeNull()
-    expect(placementCollidingPinId([root], 'root', 99)).toBeNull()
   })
 })
 

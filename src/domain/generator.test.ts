@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildReliefPins, luminance, luminanceToHeight, nearestColorId } from './generator'
-import { validatePins } from './graph'
-import { findCollidingPins } from './collision'
-import { computeBounds } from './bounds'
+import { cellsToVoxels, luminance, luminanceToHeight, nearestColorId } from './generator'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import type { ReliefCell } from './generator'
 
@@ -13,53 +10,29 @@ const cell = (col: number, row: number, height: number, colorId = 'blue'): Relie
   colorId,
 })
 
-describe('buildReliefPins', () => {
-  it('セルごとに height 本の連結タワーを生成し、整合性が取れている', () => {
-    const pins = buildReliefPins([cell(0, 0, 4), cell(1, 0, 2), cell(0, 1, 1)])
-    expect(pins).toHaveLength(7)
-    expect(validatePins(pins)).toEqual([])
-    // ルートは 3 本（タワー数）
-    expect(pins.filter((p) => p.connection === null)).toHaveLength(3)
-  })
-
-  it('タワーは g0（上ハンドル先端）連続で伸ばす', () => {
-    const pins = buildReliefPins([cell(0, 0, 5)])
-    const grips = pins.filter((p) => p.connection).map((p) => p.connection!.gripIndex)
-    expect(grips).toEqual([0, 0, 0, 0])
+describe('cellsToVoxels', () => {
+  it('セルを高さ分のボクセルに展開し、色を引き継ぐ', () => {
+    const { voxels } = cellsToVoxels([cell(0, 0, 3, 'blue'), cell(1, 0, 1, 'white')])
+    expect(voxels.size).toBe(4) // 3 + 1
+    expect(voxels.get('0,0,0')).toBe('blue')
+    expect(voxels.get('0,0,2')).toBe('blue')
+    expect(voxels.get('0,0,3')).toBeUndefined() // 高さ 3 → k=0..2
+    expect(voxels.get('1,0,0')).toBe('white')
   })
 
   it('height 0 のセルは無視される', () => {
-    expect(buildReliefPins([cell(0, 0, 0)])).toEqual([])
-    expect(buildReliefPins([])).toEqual([])
+    const { voxels, seed } = cellsToVoxels([cell(0, 0, 0)])
+    expect(voxels.size).toBe(0)
+    expect(seed).toBeUndefined()
   })
 
-  it('タワーは縦に伸びる（5 段 ≈ 4×58mm + ルート）', () => {
-    const pins = buildReliefPins([cell(0, 0, 5)])
-    const b = computeBounds(pins)!
-    expect(b.size[2]).toBeGreaterThan(200)
-    expect(b.min[2]).toBeGreaterThanOrEqual(-1) // 接地（地面より下に潜らない）
+  it('空入力 → 空・種なし', () => {
+    expect(cellsToVoxels([])).toEqual({ voxels: new Map(), seed: undefined })
   })
 
-  it('格子は中心寄せされ、ピッチに従う', () => {
-    const pins = buildReliefPins([cell(0, 0, 1), cell(2, 0, 1)], { pitchX: 65, pitchY: 20 })
-    const xs = pins.map((p) => p.transform!.position[0])
-    expect(Math.min(...xs)).toBeCloseTo(-65, 10)
-    expect(Math.max(...xs)).toBeCloseTo(65, 10)
-  })
-
-  it('id は決定的（再生成で同一）', () => {
-    const a = buildReliefPins([cell(3, 4, 2)])
-    const b = buildReliefPins([cell(3, 4, 2)])
-    expect(a.map((p) => p.id)).toEqual(b.map((p) => p.id))
-  })
-
-  it('既定間隔で隣接タワーが干渉しない（高さバラバラの格子）', () => {
-    const cells: ReliefCell[] = []
-    for (let c = 0; c < 4; c++) {
-      for (let r = 0; r < 4; r++) cells.push(cell(c, r, ((c * 3 + r) % 6) + 1))
-    }
-    const pins = buildReliefPins(cells)
-    expect(findCollidingPins(pins).size).toBe(0)
+  it('種は中心に最も近い充填セルの底（k=0）', () => {
+    const { seed } = cellsToVoxels([cell(0, 0, 2), cell(2, 0, 2), cell(4, 0, 2)])
+    expect(seed).toBe('2,0,0') // 中心列 col=2
   })
 })
 
