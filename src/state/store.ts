@@ -299,12 +299,22 @@ if (import.meta.env.DEV) {
     const bytes = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
     const file = new File([bytes], 'synthetic.png', { type: 'image/png' })
-    const result = await imageToReliefCells(file, { widthTowers, maxHeight, invert }, DEFAULT_PALETTE)
+    const result = await imageToReliefCells(
+      file,
+      { widthTowers, maxHeight, invert },
+      DEFAULT_PALETTE,
+    )
     const { voxels, seed } = cellsToVoxels(result.cells)
     const r = growAssembly(voxels, 45, seed)
     useStudio.setState({ pins: r.pins, selectedPinId: null, placementMode: false })
     useStudio.temporal.getState().clear()
-    return { cols: result.cols, rows: result.rows, covered: r.covered, target: r.target, pins: r.pins.length }
+    return {
+      cols: result.cols,
+      rows: result.rows,
+      covered: r.covered,
+      target: r.target,
+      pins: r.pins.length,
+    }
   }
 
   // ルールベース生成アセンブリの可視化デモ（docs/07）。目標ボクセル集合を種から

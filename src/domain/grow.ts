@@ -9,7 +9,13 @@ import { Matrix4 } from 'three'
 import type { Pin } from '../types'
 import { socketByIndex } from './clothespin'
 import { childWorldMatrix } from './solve'
-import { BOUNDING_RADIUS, COLLISION_TOLERANCE, obbFromMatrix, obbIntersect, type Obb } from './collision'
+import {
+  BOUNDING_RADIUS,
+  COLLISION_TOLERANCE,
+  obbFromMatrix,
+  obbIntersect,
+  type Obb,
+} from './collision'
 import { CONNECTION_CATALOG } from './catalog'
 
 export interface GrowResult {

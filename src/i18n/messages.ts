@@ -52,15 +52,15 @@ const MESSAGES = {
     en: 'Drag: orbit / right-drag: pan / wheel: zoom',
   },
 
-  // 画像→レリーフ生成（Stage A）
+  // 画像→連結アセンブリ生成（docs/07）
   genOpen: { ja: '🖼 画像から生成', en: '🖼 From image' },
-  genTitle: { ja: '画像からレリーフを生成', en: 'Generate relief from image' },
-  genWidth: { ja: '幅（タワー数）', en: 'Width (towers)' },
-  genMaxHeight: { ja: '最大高さ（段数）', en: 'Max height (pins)' },
+  genTitle: { ja: '画像から連結構造を生成', en: 'Generate connected structure' },
+  genWidth: { ja: '幅（解像度）', en: 'Width (resolution)' },
+  genMaxHeight: { ja: '最大高さ（厚み）', en: 'Max height (depth)' },
   genInvert: { ja: '明暗を反転（暗いほど高い）', en: 'Invert (darker = taller)' },
   genEstimate: {
-    ja: '生成予定: {cols}×{rows} 格子 / 約 {n} ピン',
-    en: 'Output: {cols}×{rows} grid / ~{n} pins',
+    ja: '生成予定: {cols}×{rows} / 約 {n} ピンの連結体',
+    en: 'Output: {cols}×{rows} / ~{n}-pin connected assembly',
   },
   genTooMany: {
     ja: '⚠ ピン数が上限（{n}）を超えています。幅か高さを下げてください',
