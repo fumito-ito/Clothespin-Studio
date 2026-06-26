@@ -1,26 +1,51 @@
-// 画像 → レリーフ生成ダイアログ（Stage A）。
-// 画像選択 → 量子化プレビュー + ピン数見積もり → 生成（モデルを置き換え）。
+// 画像 → 連結アセンブリ生成ダイアログ（docs/07）。
+// 画像選択 → 量子化プレビュー + ピン数見積もり → 成長生成（連結構造でモデルを置き換え）。
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { CSSProperties } from 'react'
+import type { Pin } from '../types'
 import { DEFAULT_PALETTE } from '../assets/palette'
 import { cellsToVoxels } from '../domain/generator'
 import { growAssembly } from '../domain/grow'
+import { computeBounds } from '../domain/bounds'
 import { imageToReliefCells, type ImageReliefResult } from '../io/imageToCells'
-
-/** 立方ボクセルの一辺 (mm)。被覆率実測で 45mm が好結果 */
-const VOXEL_MM = 45
-import { useT } from '../i18n'
-import { t as tNow } from '../i18n'
+import { useT, t as tNow } from '../i18n'
 import { useStudio } from '../state/store'
 import { frameView } from './actions'
 import { Btn } from './Btn'
 
+/** 立方ボクセルの一辺 (mm)。被覆率実測で 45mm が好結果 */
+const VOXEL_MM = 45
 /** 生成上限（描画性能の安全マージン, NFR-2） */
 const PIN_LIMIT = 20000
 
+/** 構造の最下点を地面(Z=0)へ合わせる。単一ルートの z を持ち上げると木全体が追従する */
+function liftToGround(pins: Pin[]): Pin[] {
+  const b = computeBounds(pins)
+  if (!b || b.min[2] === 0) return pins
+  const lift = -b.min[2]
+  return pins.map((p) =>
+    p.connection === null && p.transform
+      ? {
+          ...p,
+          transform: {
+            ...p.transform,
+            position: [
+              p.transform.position[0],
+              p.transform.position[1],
+              p.transform.position[2] + lift,
+            ],
+          },
+        }
+      : p,
+  )
+}
+
 const overlayStyle: CSSProperties = {
-  position: 'absolute',
+  // portal で body 直下に描画する（ControlPanel の backdrop-filter 配下だと fixed が
+  // ビューポートではなくパネルに内包されてしまうため）。
+  position: 'fixed',
   inset: 0,
   background: 'rgba(0,0,0,0.55)',
   display: 'grid',
@@ -88,13 +113,15 @@ export function GeneratorDialog({ onClose }: Props) {
     // 画像セル（高さ場）→ ボクセル目標 → 連結アセンブリを成長生成（docs/07）
     const { voxels, seed } = cellsToVoxels(result.cells)
     const grown = growAssembly(voxels, VOXEL_MM, seed)
-    useStudio.setState({ pins: grown.pins, selectedPinId: null, placementMode: false })
+    // 構造全体を地面(Z=0)に接地させる（ルートの z を持ち上げると木全体が追従）
+    const pinsOut = liftToGround(grown.pins)
+    useStudio.setState({ pins: pinsOut, selectedPinId: null, placementMode: false })
     useStudio.temporal.getState().clear()
     onClose()
     requestAnimationFrame(() => frameView('iso'))
   }
 
-  return (
+  return createPortal(
     <div style={overlayStyle} onClick={onClose}>
       <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{t('genTitle')}</div>
@@ -173,6 +200,7 @@ export function GeneratorDialog({ onClose }: Props) {
           </Btn>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
