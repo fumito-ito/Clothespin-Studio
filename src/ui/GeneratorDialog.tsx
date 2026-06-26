@@ -79,26 +79,34 @@ export function GeneratorDialog({ onClose }: Props) {
   const previewRef = useRef<HTMLCanvasElement>(null)
 
   // パラメータ変更のたびにセルを再計算してプレビュー描画
+  // （ファイル未選択時のクリアは onChange 側で行う。setState を effect 内で同期呼びしない）
   useEffect(() => {
     if (!file) return
     let cancelled = false
-    void imageToReliefCells(file, { widthTowers, maxHeight, invert }, DEFAULT_PALETTE).then((r) => {
-      if (cancelled) return
-      setResult(r)
-      const canvas = previewRef.current
-      if (!canvas) return
-      canvas.width = r.cols
-      canvas.height = r.rows
-      const ctx = canvas.getContext('2d')!
-      ctx.clearRect(0, 0, r.cols, r.rows)
-      for (const cell of r.cells) {
-        ctx.fillStyle = HEX_BY_ID.get(cell.colorId) ?? '#888888'
-        // 高さを少し明暗に反映してプレビューに起伏感を出す
-        ctx.globalAlpha = 0.45 + (0.55 * cell.height) / maxHeight
-        ctx.fillRect(cell.col, cell.row, 1, 1)
-      }
-      ctx.globalAlpha = 1
-    })
+    imageToReliefCells(file, { widthTowers, maxHeight, invert }, DEFAULT_PALETTE)
+      .then((r) => {
+        if (cancelled) return
+        setResult(r)
+        const canvas = previewRef.current
+        if (!canvas) return
+        canvas.width = r.cols
+        canvas.height = r.rows
+        const ctx = canvas.getContext('2d')!
+        ctx.clearRect(0, 0, r.cols, r.rows)
+        for (const cell of r.cells) {
+          ctx.fillStyle = HEX_BY_ID.get(cell.colorId) ?? '#888888'
+          // 高さを少し明暗に反映してプレビューに起伏感を出す
+          ctx.globalAlpha = 0.45 + (0.55 * cell.height) / maxHeight
+          ctx.fillRect(cell.col, cell.row, 1, 1)
+        }
+        ctx.globalAlpha = 1
+      })
+      .catch((err) => {
+        // デコード失敗（非対応/破損画像など）。古い見積もりを残さずクリアする
+        if (cancelled) return
+        console.error('imageToReliefCells failed', err)
+        setResult(null)
+      })
     return () => {
       cancelled = true
     }
@@ -129,7 +137,12 @@ export function GeneratorDialog({ onClose }: Props) {
         <input
           type="file"
           accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null
+            setFile(f)
+            // ファイルをクリアしたら古い見積もり/プレビューを残さない
+            if (!f) setResult(null)
+          }}
           style={{ fontSize: 12, marginBottom: 8, maxWidth: '100%' }}
         />
 
