@@ -25,8 +25,11 @@ export function Btn({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
+      // active を持つボタンはトグル扱いとして押下状態を支援技術へ伝える
+      aria-pressed={active}
       style={{
         ...buttonStyle,
         ...(active ? { borderColor: 'var(--color-accent)', color: 'var(--color-accent)' } : {}),

@@ -31,6 +31,8 @@ interface Placed {
   obb: Obb
   occupied: Set<number>
   id: string
+  /** 親ピンの placed インデックス（ルートは -1） */
+  parent: number
 }
 
 const GRID_CELL = 2 * BOUNDING_RADIUS
@@ -63,6 +65,8 @@ export function growAssembly(
     if (arr) arr.push(i)
     else grid.set(key, [i])
   }
+  // 新ピン（親 = parent インデックス）が近傍の既存ピンと干渉するか。
+  // 親自身と「同じ親を持つ兄弟」は除外する（collision.ts と同じハブ近接の扱い）。
   const collidesNearby = (obb: Obb, parent: number): boolean => {
     const [cx, cy, cz] = obb.c
     const ci = gcell(cx)
@@ -75,6 +79,7 @@ export function growAssembly(
           if (!arr) continue
           for (const idx of arr) {
             if (idx === parent) continue // 親との接合部は除外
+            if (placed[idx].parent === parent) continue // 兄弟（同じハブ）は除外
             if (obbIntersect(obb, placed[idx].obb, tolerance)) return true
           }
         }
@@ -89,7 +94,7 @@ export function growAssembly(
 
   // 種ピン（ルート）
   const seedM = new Matrix4().makeTranslation(si * voxelMm, sj * voxelMm, sk * voxelMm)
-  placed.push({ m: seedM, obb: obbFromMatrix(seedM), occupied: new Set(), id: 'g0' })
+  placed.push({ m: seedM, obb: obbFromMatrix(seedM), occupied: new Set(), id: 'g0', parent: -1 })
   pins.push({
     id: 'g0',
     colorId: voxels.get(seed)!,
@@ -117,7 +122,7 @@ export function growAssembly(
       const idx = placed.length
       const id = `g${idx}`
       parent.occupied.add(move.gripIndex)
-      placed.push({ m, obb, occupied: new Set(), id })
+      placed.push({ m, obb, occupied: new Set(), id, parent: pi })
       pins.push({
         id,
         colorId,

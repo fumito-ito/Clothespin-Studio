@@ -15,7 +15,10 @@ function stubCanvas(width: number, height: number, pixels: Px[]) {
   const data = new Uint8ClampedArray(pixels.length * 4)
   pixels.forEach((px, i) => data.set(px, i * 4))
 
-  vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width, height, close: vi.fn() })))
+  vi.stubGlobal(
+    'createImageBitmap',
+    vi.fn(async () => ({ width, height, close: vi.fn() })),
+  )
   vi.stubGlobal('document', {
     createElement: () => ({
       width: 0,
@@ -32,8 +35,9 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// ダミーファイル（実体はスタブが無視する）
-const file = new File([new Uint8Array([1])], 'x.png', { type: 'image/png' })
+// ダミーファイル。スタブした createImageBitmap は入力を無視するので実体は不要
+// （Node ランタイムによっては File が未定義のため、生成せずキャストで済ませる）。
+const file = {} as File
 
 describe('imageToReliefCells', () => {
   it('アスペクト比から行数を算出し、透明セルを除外して量子化する', async () => {
