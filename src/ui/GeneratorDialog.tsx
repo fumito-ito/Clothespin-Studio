@@ -104,10 +104,12 @@ export function GeneratorDialog({ onClose }: Props) {
           ctx.globalAlpha = 1
         })
         .catch((err) => {
-          // デコード失敗（非対応/破損画像など）。古い見積もりを残さずクリアする
+          // デコード失敗（非対応/破損画像など）。古い見積もり/プレビューを残さずクリアする
           if (cancelled) return
           console.error('imageToReliefCells failed', err)
           setResult(null)
+          const canvas = previewRef.current
+          if (canvas) canvas.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
         })
     }, 120)
     return () => {
