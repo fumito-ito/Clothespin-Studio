@@ -22,7 +22,7 @@ export interface ImageReliefResult {
 
 /**
  * 画像ファイルをセル格子に変換する。
- * 行数はタワーピッチの縦横比を補正して算出する（真上から見て歪まないように）。
+ * 行数は画像のアスペクト比から算出する（真上から見て歪まないように）。
  */
 export async function imageToReliefCells(
   file: File,
