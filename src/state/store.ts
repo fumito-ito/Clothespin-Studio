@@ -271,4 +271,81 @@ if (import.meta.env.DEV) {
     useStudio.temporal.getState().clear()
     return count
   }
+
+  // 画像→連結アセンブリ生成の動作確認用（プレビュー環境では input.files を設定できないため、
+  // 合成画像を実パイプライン imageToReliefCells→cellsToVoxels→growAssembly に通す）。
+  w.__genSynthetic = async (widthTowers = 16, maxHeight = 6, invert = false) => {
+    const [{ imageToReliefCells }, { cellsToVoxels }, { growAssembly }, { DEFAULT_PALETTE }] =
+      await Promise.all([
+        import('../io/imageToCells'),
+        import('../domain/generator'),
+        import('../domain/grow'),
+        import('../assets/palette'),
+      ])
+    const c = document.createElement('canvas')
+    c.width = 40
+    c.height = 40
+    const ctx = c.getContext('2d')!
+    const grad = ctx.createLinearGradient(0, 0, 40, 40)
+    grad.addColorStop(0, '#0C48A3')
+    grad.addColorStop(1, '#ffffff')
+    ctx.fillStyle = grad
+    ctx.fillRect(0, 0, 40, 40)
+    ctx.fillStyle = '#000000'
+    ctx.beginPath()
+    ctx.arc(20, 20, 9, 0, Math.PI * 2)
+    ctx.fill()
+    const bin = atob(c.toDataURL('image/png').split(',')[1])
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    const file = new File([bytes], 'synthetic.png', { type: 'image/png' })
+    const result = await imageToReliefCells(
+      file,
+      { widthTowers, maxHeight, invert },
+      DEFAULT_PALETTE,
+    )
+    const { voxels, seed } = cellsToVoxels(result.cells)
+    const r = growAssembly(voxels, 45, seed)
+    useStudio.setState({ pins: r.pins, selectedPinId: null, placementMode: false })
+    useStudio.temporal.getState().clear()
+    return {
+      cols: result.cols,
+      rows: result.rows,
+      covered: r.covered,
+      target: r.target,
+      pins: r.pins.length,
+    }
+  }
+
+  // ルールベース生成アセンブリの可視化デモ（docs/07）。目標ボクセル集合を種から
+  // 充填し、1 つの連結木（干渉なし）を生成する。shape: 'sphere'|'pyramid'
+  w.__grow = async (shape = 'sphere', V = 45) => {
+    const { growAssembly } = await import('../domain/grow')
+    const colors = ['blue', 'white', 'warmgray']
+    const voxels = new Map<string, string>()
+    let seed: string
+    if (shape === 'pyramid') {
+      const n = 9
+      for (let i = 0; i < n; i++)
+        for (let j = 0; j < n; j++) {
+          const h = 1 + Math.min(i, n - 1 - i, j, n - 1 - j)
+          for (let k = 0; k < h; k++) voxels.set(`${i},${j},${k}`, colors[(i + j + k) % 3])
+        }
+      seed = '4,4,0'
+    } else {
+      const R = 4
+      for (let i = -R; i <= R; i++)
+        for (let j = -R; j <= R; j++)
+          for (let k = -R; k <= R; k++)
+            if (i * i + j * j + k * k <= R * R)
+              voxels.set(`${i + R},${j + R},${k + R}`, colors[(i + j + k + 3 * R) % 3])
+      seed = '4,4,4'
+    }
+    const t0 = performance.now()
+    const r = growAssembly(voxels, V, seed)
+    const ms = Math.round(performance.now() - t0)
+    useStudio.setState({ pins: r.pins, selectedPinId: null, placementMode: false })
+    useStudio.temporal.getState().clear()
+    return { shape, pins: r.pins.length, covered: r.covered, target: r.target, ms }
+  }
 }
