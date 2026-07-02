@@ -31,6 +31,8 @@ created: YYYY-MM-DD
 3. **完了**: PR マージ後、`status: done` + `pr:` 記入（PR 内で更新してよい）
 
 Claude Code では着手/完了を `/issue NNNN` / `/issue NNNN done` で実行できる（.claude/skills/issue）。
+着手時は既定で**実装を下位モデルの implementer サブエージェントに委任**し、上位モデルは
+モデル選定・レビュー・フィードバックに徹する（`/issue NNNN solo` で委任なし）。
 
 ## ループ運用（自律イテレーション）
 
