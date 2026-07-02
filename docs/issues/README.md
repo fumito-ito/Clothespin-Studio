@@ -30,6 +30,14 @@ created: YYYY-MM-DD
 2. **着手**: `issue/NNNN-slug` ブランチを切り、frontmatter を `status: in-progress` + `branch:` 記入
 3. **完了**: PR マージ後、`status: done` + `pr:` 記入（PR 内で更新してよい）
 
+Claude Code では着手/完了を `/issue NNNN` / `/issue NNNN done` で実行できる（.claude/skills/issue）。
+
+## ループ運用（自律イテレーション）
+
+- **受入基準を停止条件にする**: `/goal <Issue の受入基準> 最大 N ターン` で、検証が通るまで
+  自律的に反復させる。受入基準は必ず機械的に検証可能な形で書くこと（このための形式）
+- 定期作業（依存更新・CI 監視など）は `/loop` / `/schedule` を使う
+
 ## 一覧の確認
 
 インデックスファイルは持たない（並列更新で衝突するため）。一覧はコマンドで取る:

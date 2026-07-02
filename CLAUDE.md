@@ -11,10 +11,9 @@
 
 ## アーキテクチャ
 
-- `src/domain/` = 純ロジック（three の Matrix4 のみ・DOM 禁止・必ず vitest でテスト）
-- `src/scene/` R3F 描画 / `src/state/` zustand+zundo / `src/io/` 入出力 / `src/ui/` パネル
+- `src/domain/` 純ロジック（制約は path ルールで注入）/ `src/scene/` R3F 描画 /
+  `src/state/` zustand+zundo / `src/io/` 入出力 / `src/ui/` パネル
 - 設計文書は `docs/01`〜`07`。`07` が構築モデルと現行ロードマップ（`develop/generate-from-image` 上）
-- 連結幾何の主張は必ず実測テストで裏取りする。回転 0 の単一連結は存在しない（docs/07 §1）
 
 ## 規約
 
