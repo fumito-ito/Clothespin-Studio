@@ -13,6 +13,7 @@ id: 1
 title: 短いタイトル
 status: open        # open | in-progress | done | wontfix
 depends: []          # 依存する issue id（例: [1, 2]）
+parent:              # 分割で生まれた子 Issue は元の issue id を記入
 branch:              # 着手時にブランチ名を記入
 pr:                  # マージ後に PR URL を記入
 created: YYYY-MM-DD
@@ -27,8 +28,10 @@ created: YYYY-MM-DD
 ## ワークフロー
 
 1. **起票**: 上記形式でファイルを追加（status: open）
-2. **着手**: `issue/NNNN-slug` ブランチを切り、frontmatter を `status: in-progress` + `branch:` 記入
-3. **完了**: PR マージ後、`status: done` + `pr:` 記入（PR 内で更新してよい）
+2. **リファイン**: 着手前に `/refine NNNN` で精査。委任可能な粒度（1 セッション・1 PR・
+   受入基準が機械検証可能）へ分割し、不確実性はスパイクで先に潰す（.claude/skills/refine）
+3. **着手**: `issue/NNNN-slug` ブランチを切り、frontmatter を `status: in-progress` + `branch:` 記入
+4. **完了**: PR マージ後、`status: done` + `pr:` 記入（PR 内で更新してよい）
 
 Claude Code では着手/完了を `/issue NNNN` / `/issue NNNN done` で実行できる（.claude/skills/issue）。
 着手時は既定で**実装を下位モデルの implementer サブエージェントに委任**し、上位モデルは
