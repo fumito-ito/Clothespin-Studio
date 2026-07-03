@@ -1,7 +1,7 @@
 ---
 id: 8
 title: "[spike] 内外判定ボクセル化の方式決定"
-status: open
+status: in-progress
 depends: []
 parent: 1
 branch:

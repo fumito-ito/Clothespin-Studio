@@ -1,7 +1,7 @@
 ---
 id: 9
 title: GLB ローダ + 正規化（スケール / Z-up / 接地）
-status: open
+status: in-progress
 depends: []
 parent: 1
 branch:
