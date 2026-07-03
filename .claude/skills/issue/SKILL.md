@@ -13,9 +13,12 @@ disable-model-invocation: true
 このセッション（上位モデル）の仕事は **①モデル選定 ②レビュー ③フィードバック** のみ。
 実装は implementer サブエージェント（`.claude/agents/implementer.md`）に委任する。
 
-1. **準備**: `docs/issues/` の該当ファイルを読み、`depends:` の各 Issue が `status: done` か確認
-   （未完了なら着手せず報告して止まる）。統合ブランチ（現行: `develop/generate-from-image`）を
-   最新化し `issue/NNNN-<slug>` ブランチを作成。frontmatter を `status: in-progress` +
+1. **準備**: `docs/issues/` の該当ファイルを読み、まず着手可能か判定する:
+   - **分割済み・追跡用 Issue（本文に子 Issue 一覧があり実装対象がない）なら着手しない。**
+     open の子 Issue 一覧（並列可能な組み合わせ付き）を提示して終了
+   - `depends:` の各 Issue が `status: done` か確認（未完了なら着手せず報告して止まる）
+   判定を通ったら、統合ブランチ（現行: `develop/generate-from-image`）を最新化し
+   `issue/NNNN-<slug>` ブランチを作成。frontmatter を `status: in-progress` +
    `branch:` に更新してコミット。
 2. **モデル選定**: 受入基準から実装担当モデルを決め、**選定理由を 1 行でユーザーに報告**する。
    - `haiku`: 機械的な作業（リネーム・文言・docs・定型的な配線・frontmatter 更新）
