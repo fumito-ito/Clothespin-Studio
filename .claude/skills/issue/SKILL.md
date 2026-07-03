@@ -6,7 +6,8 @@ disable-model-invocation: true
 
 # Issue ワークフロー: $ARGUMENTS
 
-`$ARGUMENTS` は Issue 番号（例: `1`）、`<番号> done`（完了処理）、`<番号> solo`（委任せず自分で実装）。
+`$ARGUMENTS` は Issue 番号（例: `1`）、`<番号> done`（完了処理）、`<番号> solo`（委任せず自分で実装）、
+`<番号> worktree`（別セッション並列用の worktree 準備のみ）。
 
 ## 着手（`/issue NNNN`）— 既定は委任フロー
 
@@ -36,6 +37,23 @@ disable-model-invocation: true
 
 複数 Issue を 1 セッションで並列に回す場合は、implementer を `run_in_background` +
 worktree 分離で複数起動し、完了順にレビューする（依存のない Issue に限る）。
+harness が作る worktree には settings の `worktree.symlinkDirectories` で node_modules が
+symlink される前提（無いと検証 4 点が落ちる）。
+
+## 並列準備（`/issue NNNN worktree`）
+
+別セッション並列（方法A）用に worktree だけを用意する。**frontmatter は更新しない**
+（status 更新は新セッション側の着手フローが行う。着手の事実と記録を一致させるため）。
+
+1. 着手時と同じ判定を先に行う: 追跡用 Issue・`depends:` 未完了なら**作らずに**報告して終了
+2. 統合ブランチを最新化し、worktree を作成:
+   `git worktree add ../<リポジトリ名>-iNNNN -b issue/NNNN-<slug> <統合ブランチ>`
+3. node_modules を本体から symlink する（これが無いと worktree 内で検証 4 点が全滅する）:
+   `ln -s <本体の絶対パス>/node_modules ../<リポジトリ名>-iNNNN/node_modules`
+   symlink 起因の問題が出た場合のみ worktree 内で `npm ci` に切り替える
+4. 案内を出力して終了:
+   「`cd ../<リポジトリ名>-iNNNN && claude` を起動し、新セッションで `/issue NNNN` を実行」
+   （後片付け: マージ後に `git worktree remove ../<リポジトリ名>-iNNNN`）
 
 ## 完了（`/issue NNNN done`）
 
