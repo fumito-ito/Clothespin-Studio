@@ -21,7 +21,7 @@ created: 2026-07-03
   （`MeshData.vertexColors`・3 頂点の平均）→ `nearestColorId`
   （`src/domain/generator.ts` から流用/移設）でパレット量子化
 - 内部ボクセルは最寄り表面ボクセルの色を継承
-- `faceColors` が無い（無色モデル）場合は全ボクセル既定色（`DEFAULT_COLOR_ID`）
+- `vertexColors` が無い（無色モデル）場合は全ボクセル既定色（`DEFAULT_COLOR_ID`）
 
 ## 受入基準
 

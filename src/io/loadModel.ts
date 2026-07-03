@@ -2,10 +2,18 @@
 // three.js の GLTFLoader でパースし、シーン内の全メッシュを 1 つの MeshData に統合する。
 // 座標系・単位の正規化は行わない（domain/normalize.ts の責務）。対象は GLB のみ（STL/OBJ は別 Issue）。
 
-import { BufferGeometry, Mesh, MeshStandardMaterial, Vector3 } from 'three'
+import { BufferGeometry, Color, Material, Mesh, Vector3 } from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js'
 import type { MeshData } from '../types'
+
+/** .color（three.Color）を持つマテリアル。MeshStandardMaterial に限らず
+ *  KHR_materials_unlit 等で GLTFLoader が生成する MeshBasicMaterial も対象に含める */
+type ColoredMaterial = Material & { color: Color }
+
+function hasColorProperty(material: Material): material is ColoredMaterial {
+  return 'color' in material && (material as { color?: unknown }).color instanceof Color
+}
 
 export type LoadModelResult = { ok: true; mesh: MeshData } | { ok: false; error: string }
 
@@ -40,10 +48,7 @@ function hasGltfMaterial(gltf: GLTF, doc: GltfDocument, mesh: Mesh): boolean {
 }
 
 /** three.Mesh から頂点ごとの RGB（0-1）を取り出す。頂点色があれば優先、無ければマテリアル色 */
-function extractVertexColors(
-  geometry: BufferGeometry,
-  material: MeshStandardMaterial,
-): Float32Array {
+function extractVertexColors(geometry: BufferGeometry, material: ColoredMaterial): Float32Array {
   const colorAttr = geometry.getAttribute('color')
   const vertexCount = geometry.getAttribute('position').count
   const out = new Float32Array(vertexCount * 3)
@@ -99,7 +104,7 @@ function meshDataFromGltf(gltf: GLTF, doc: GltfDocument): MeshData {
     const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material
     const meshHasColor = geo.hasAttribute('color') || hasGltfMaterial(gltf, doc, mesh)
     const colors =
-      vertexColors && meshHasColor && material instanceof MeshStandardMaterial
+      vertexColors && meshHasColor && hasColorProperty(material)
         ? extractVertexColors(geo, material)
         : undefined
 

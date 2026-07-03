@@ -64,6 +64,55 @@ describe('loadGlbModel', () => {
     }
   })
 
+  it('KHR_materials_unlit（MeshBasicMaterial）の baseColorFactor も vertexColors に入る', async () => {
+    // KHR_materials_unlit 拡張付きマテリアルは GLTFLoader が MeshStandardMaterial ではなく
+    // MeshBasicMaterial を生成する。.color を持つマテリアル全般が抽出対象になることの確認
+    const glb = buildGlb([
+      {
+        positions: TRIANGLE_POSITIONS,
+        materialColor: [0.3, 0.6, 0.9, 1],
+        unlit: true,
+      },
+    ])
+    const result = await loadGlbModel(glb)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.mesh.vertexColors).toBeDefined()
+    const colors = result.mesh.vertexColors!
+    for (let i = 0; i < 3; i++) {
+      expect(colors[i * 3]).toBeCloseTo(0.3, 5)
+      expect(colors[i * 3 + 1]).toBeCloseTo(0.6, 5)
+      expect(colors[i * 3 + 2]).toBeCloseTo(0.9, 5)
+    }
+  })
+
+  it('COLOR_0 が UNSIGNED_BYTE + normalized の場合も 0-1 の範囲で vertexColors に入る（回帰）', async () => {
+    // glTF 仕様上 COLOR_0 の整数型は normalized 必須。GLTFLoader は accessor の normalized を
+    // BufferAttribute に引き継ぎ、BufferAttribute#getX/Y/Z は normalized なら denormalize して返す
+    // （three 0.184 の src/core/BufferAttribute.js）。0-1 契約を満たすことを数値で確認する。
+    const glb = buildGlb([
+      {
+        positions: TRIANGLE_POSITIONS,
+        // 頂点ごとに (255,0,0) (0,255,0) (0,128,255) の RGB を UNSIGNED_BYTE で格納
+        colorsUnsignedByte: [255, 0, 0, 0, 255, 0, 0, 128, 255],
+      },
+    ])
+    const result = await loadGlbModel(glb)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.mesh.vertexColors).toBeDefined()
+    const colors = result.mesh.vertexColors!
+    expect(colors[0]).toBeCloseTo(1.0, 5) // 255 → 1.0
+    expect(colors[1]).toBeCloseTo(0, 5)
+    expect(colors[2]).toBeCloseTo(0, 5)
+    expect(colors[3]).toBeCloseTo(0, 5)
+    expect(colors[4]).toBeCloseTo(1.0, 5)
+    expect(colors[5]).toBeCloseTo(0, 5)
+    expect(colors[6]).toBeCloseTo(0, 5)
+    expect(colors[7]).toBeCloseTo(128 / 255, 3) // 128 → ≈0.502
+    expect(colors[8]).toBeCloseTo(1.0, 5)
+  })
+
   it('頂点色・マテリアルどちらも無ければ vertexColors は undefined', async () => {
     const glb = buildGlb([{ positions: TRIANGLE_POSITIONS }])
     const result = await loadGlbModel(glb)

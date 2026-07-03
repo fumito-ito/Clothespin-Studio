@@ -7,10 +7,17 @@ export interface GlbPrimitiveSpec {
   positions: number[]
   /** 三角形インデックス（省略時は positions を順に 0,1,2,... で使う） */
   indices?: number[]
-  /** 頂点ごとの RGB（0-1, 連続）。省略可 */
+  /** 頂点ごとの RGB（0-1, 連続）。float（componentType 5126）で格納する。省略可 */
   colors?: number[]
+  /**
+   * 頂点ごとの RGB を UNSIGNED_BYTE(0-255) + normalized で格納したい場合に使う。
+   * glTF 仕様上 COLOR_0 の整数型は normalized 必須（denormalize 後に 0-1 になることの回帰確認用）
+   */
+  colorsUnsignedByte?: number[]
   /** マテリアルの baseColorFactor（RGBA, 0-1）。省略時はマテリアル未指定 */
   materialColor?: [number, number, number, number]
+  /** true で KHR_materials_unlit 拡張を付与する（GLTFLoader は MeshBasicMaterial を生成） */
+  unlit?: boolean
   /** ノードの平行移動（省略時は原点） */
   translation?: [number, number, number]
 }
@@ -38,6 +45,8 @@ export function buildGlb(specs: GlbPrimitiveSpec[]): ArrayBuffer {
     byteOffset += bytes.byteLength + padding
     return viewIndex
   }
+
+  let usesUnlit = false
 
   specs.forEach((spec) => {
     const positions = new Float32Array(spec.positions)
@@ -91,12 +100,31 @@ export function buildGlb(specs: GlbPrimitiveSpec[]): ArrayBuffer {
         type: 'VEC3',
       })
       attributes.COLOR_0 = colorAccessor
+    } else if (spec.colorsUnsignedByte) {
+      // COLOR_0 を UNSIGNED_BYTE(5121) + normalized: true で格納する
+      const colors = new Uint8Array(spec.colorsUnsignedByte)
+      const colorView = pushBuffer(colors)
+      const colorAccessor = accessors.length
+      accessors.push({
+        bufferView: colorView,
+        componentType: 5121,
+        normalized: true,
+        count: vertexCount,
+        type: 'VEC3',
+      })
+      attributes.COLOR_0 = colorAccessor
     }
 
     let materialIndex: number | undefined
-    if (spec.materialColor) {
+    if (spec.materialColor || spec.unlit) {
       materialIndex = materials.length
-      materials.push({ pbrMetallicRoughness: { baseColorFactor: spec.materialColor } })
+      materials.push({
+        ...(spec.materialColor
+          ? { pbrMetallicRoughness: { baseColorFactor: spec.materialColor } }
+          : {}),
+        ...(spec.unlit ? { extensions: { KHR_materials_unlit: {} } } : {}),
+      })
+      if (spec.unlit) usesUnlit = true
     }
 
     const meshIndex = meshes.length
@@ -124,6 +152,7 @@ export function buildGlb(specs: GlbPrimitiveSpec[]): ArrayBuffer {
     nodes,
     meshes,
     ...(materials.length > 0 ? { materials } : {}),
+    ...(usesUnlit ? { extensionsUsed: ['KHR_materials_unlit'] } : {}),
     buffers: [{ byteLength: byteOffset }],
     bufferViews,
     accessors,
