@@ -39,4 +39,7 @@ function voxelizeSolid(mesh: MeshData, voxelMm: number):
 ## 参照
 
 - **issue 0008 の決定記録（着手前に必読）** / docs/07 §9 M1
+- 0008 の決定要約（2026-07-03 確定）: **6 方向多数決（±X/±Y/±Z の奇偶判定を多数決）**を採用。
+  実装は自前の Möller–Trumbore 交差 + 一様グリッド索引（新規依存なし）。40³ で 85〜103ms。
+  仮実装の参考コード: `spike/voxelization` ブランチの `spike/voxelize.ts`（マージ禁止・参照のみ）
 - grow 側の期待形式: `src/domain/grow.ts` の `growAssembly(voxels, voxelMm, seedKey)`
