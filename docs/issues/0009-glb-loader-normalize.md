@@ -5,7 +5,7 @@ status: done
 depends: []
 parent: 1
 branch: issue/0009-glb-loader-normalize
-pr:
+pr: https://github.com/fumito-ito/Clothespin-Studio/pull/5
 created: 2026-07-03
 ---
 
