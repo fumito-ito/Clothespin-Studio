@@ -20,6 +20,8 @@ export interface GlbPrimitiveSpec {
   unlit?: boolean
   /** ノードの平行移動（省略時は原点） */
   translation?: [number, number, number]
+  /** ノード名（非 ASCII を含む名前で JSON チャンクの 4byte アラインを確認する用途にも使う） */
+  nodeName?: string
 }
 
 function pad4(len: number): number {
@@ -142,6 +144,7 @@ export function buildGlb(specs: GlbPrimitiveSpec[]): ArrayBuffer {
     nodes.push({
       mesh: meshIndex,
       ...(spec.translation ? { translation: spec.translation } : {}),
+      ...(spec.nodeName ? { name: spec.nodeName } : {}),
     })
   })
 
@@ -158,9 +161,14 @@ export function buildGlb(specs: GlbPrimitiveSpec[]): ArrayBuffer {
     accessors,
   }
 
+  // 4byte アラインは UTF-8 エンコード後のバイト長基準で計算する（非 ASCII は 1 文字が複数byte になるため、
+  // JS 文字列の length＝UTF-16 コードユニット数を基準にすると 4byte アラインが崩れ、glTF 仕様違反の GLB になる）
   const jsonStr = JSON.stringify(json)
-  const jsonPadding = pad4(jsonStr.length)
-  const jsonBuf = new TextEncoder().encode(jsonStr + ' '.repeat(jsonPadding))
+  const jsonStrBytes = new TextEncoder().encode(jsonStr)
+  const jsonPadding = pad4(jsonStrBytes.byteLength)
+  const jsonBuf = new Uint8Array(jsonStrBytes.byteLength + jsonPadding)
+  jsonBuf.set(jsonStrBytes, 0)
+  jsonBuf.fill(0x20, jsonStrBytes.byteLength) // glTF 仕様: JSON チャンクの末尾パディングは半角スペース(0x20)
 
   const bin = new Uint8Array(byteOffset)
   let cursor = 0

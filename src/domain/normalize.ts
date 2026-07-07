@@ -9,7 +9,7 @@ import type { MeshData } from '../types'
 // X 軸まわり +90°: (x, y, z) → (x, -z, y)
 const Y_UP_TO_Z_UP = new Matrix4().makeRotationX(Math.PI / 2)
 
-/** 頂点座標から Y-up 前提の bbox を計算する（座標変換前） */
+/** xyz 連続の頂点座標から bbox を計算する（座標系に依存しない。変換前後どちらにも使う） */
 function computeBoundsFromPositions(positions: Float32Array): Box3 {
   const box = new Box3()
   const v = new Vector3()

@@ -58,7 +58,7 @@ export const PROJECT_VERSION = 1
  * ボクセル化（後続 Issue）の入力。normalize 適用後は単位 mm・Z-up・接地（min.z = 0）を想定する。
  */
 export interface MeshData {
-  /** xyz 連続の頂点座標。単位 mm */
+  /** xyz 連続の頂点座標。単位は入力（読み込み元）依存。`normalizeMesh` 適用後は単位 mm・Z-up・接地（min.z = 0） */
   positions: Float32Array
   /** 三角形インデックス */
   indices: Uint32Array

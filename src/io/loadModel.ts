@@ -139,13 +139,20 @@ function meshDataFromGltf(gltf: GLTF, doc: GltfDocument): MeshData {
 /**
  * GLB バイナリの JSON チャンクだけを取り出す（マテリアル有無の判定に使う glTF ドキュメント）。
  * glTF 2.0 バイナリ仕様: 12byte ヘッダ + チャンク列。チャンク0 は常に JSON。
+ * ヘッダ/チャンク境界を検証してから切り出す（壊れたファイルで範囲外読み取りにならないように）。
  */
 function extractGlbJsonChunk(data: ArrayBuffer): GltfDocument {
   const GLB_MAGIC = 0x46546c67 // 'glTF' の ASCII をリトルエンディアンの uint32 として見た値
-  if (data.byteLength < 12) throw new Error('GLB ヘッダが不足しています')
+  const JSON_CHUNK_TYPE = 0x4e4f534a // 'JSON' の ASCII をリトルエンディアンの uint32 として見た値
+  // 12byte ヘッダ + チャンク0 のヘッダ（長さ4byte + 種別4byte）分は最低限必要
+  if (data.byteLength < 20) throw new Error('GLB ヘッダが不足しています')
   const header = new DataView(data, 0, 12)
   if (header.getUint32(0, true) !== GLB_MAGIC) throw new Error('GLB マジックナンバーが一致しません')
-  const jsonChunkLength = new DataView(data, 12, 4).getUint32(0, true)
+  const chunkHeader = new DataView(data, 12, 8)
+  const jsonChunkLength = chunkHeader.getUint32(0, true)
+  const jsonChunkType = chunkHeader.getUint32(4, true)
+  if (jsonChunkType !== JSON_CHUNK_TYPE) throw new Error('先頭チャンクが JSON ではありません')
+  if (20 + jsonChunkLength > data.byteLength) throw new Error('JSON チャンクの長さが不正です')
   const jsonBytes = new Uint8Array(data, 20, jsonChunkLength)
   return JSON.parse(new TextDecoder().decode(jsonBytes)) as GltfDocument
 }
