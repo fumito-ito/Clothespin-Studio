@@ -113,6 +113,25 @@ describe('loadGlbModel', () => {
     expect(colors[8]).toBeCloseTo(1.0, 5)
   })
 
+  it('色あり・なしのメッシュが混在する場合、無色メッシュの頂点は白（glTF 既定色）で補完される', async () => {
+    const glb = buildGlb([
+      { positions: TRIANGLE_POSITIONS, materialColor: [0.2, 0.4, 0.6, 1] },
+      { positions: TRIANGLE_POSITIONS, translation: [1000, 0, 0] }, // マテリアル未指定
+    ])
+    const result = await loadGlbModel(glb)
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const colors = result.mesh.vertexColors!
+    expect(colors).toBeDefined()
+    // 前半 3 頂点 = マテリアル色、後半 3 頂点 = 白（0 埋め＝黒だと下流で誤った意味を持つ）
+    for (let i = 0; i < 3; i++) {
+      expect(colors[i * 3]).toBeCloseTo(0.2, 5)
+      expect(colors[(3 + i) * 3]).toBe(1)
+      expect(colors[(3 + i) * 3 + 1]).toBe(1)
+      expect(colors[(3 + i) * 3 + 2]).toBe(1)
+    }
+  })
+
   it('頂点色・マテリアルどちらも無ければ vertexColors は undefined', async () => {
     const glb = buildGlb([{ positions: TRIANGLE_POSITIONS }])
     const result = await loadGlbModel(glb)

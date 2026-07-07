@@ -114,10 +114,13 @@ function meshDataFromGltf(gltf: GLTF, doc: GltfDocument): MeshData {
       positions[(vertexOffset + i) * 3 + 1] = v.y
       positions[(vertexOffset + i) * 3 + 2] = v.z
       if (vertexColors) {
-        // 色を持たないメッシュは 0 埋め（白で塗りつぶさない。頂点単位で色有無が混在する場合の妥協）
-        vertexColors[(vertexOffset + i) * 3] = colors ? colors[i * 3] : 0
-        vertexColors[(vertexOffset + i) * 3 + 1] = colors ? colors[i * 3 + 1] : 0
-        vertexColors[(vertexOffset + i) * 3 + 2] = colors ? colors[i * 3 + 2] : 0
+        // 色あり・なしのメッシュが混在する場合、色を持たないメッシュは白（1,1,1）で補完する。
+        // glTF 仕様のデフォルトマテリアルは baseColorFactor [1,1,1,1]（白）であり、
+        // 「マテリアル未指定 = 白」が仕様上の既定のため。0（黒）だと下流のパレット量子化で
+        // 「黒い部分」という誤った意味を持ってしまう
+        vertexColors[(vertexOffset + i) * 3] = colors ? colors[i * 3] : 1
+        vertexColors[(vertexOffset + i) * 3 + 1] = colors ? colors[i * 3 + 1] : 1
+        vertexColors[(vertexOffset + i) * 3 + 2] = colors ? colors[i * 3 + 2] : 1
       }
     }
 

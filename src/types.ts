@@ -62,6 +62,10 @@ export interface MeshData {
   positions: Float32Array
   /** 三角形インデックス */
   indices: Uint32Array
-  /** 頂点ごとの RGB（0-1）。マテリアル色/頂点色いずれも取得できなければ undefined */
+  /**
+   * 頂点ごとの RGB（0-1）。モデル全体でマテリアル色/頂点色が一切取得できなければ undefined。
+   * 存在する場合は全頂点に有効な色が入る: 色あり・なしのメッシュが混在するモデルでは、
+   * 色を持たないメッシュの頂点は白（1,1,1 = glTF のデフォルトマテリアル色）で補完される
+   */
   vertexColors?: Float32Array
 }
