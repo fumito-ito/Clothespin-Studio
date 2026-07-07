@@ -5,8 +5,7 @@
 import { Box3, Matrix4, Vector3 } from 'three'
 import type { MeshData } from '../types'
 
-// Y-up → Z-up: glTF エクスポート時の逆変換（exportGltf.ts の Z-up → Y-up と対）。
-// X 軸まわり +90°: (x, y, z) → (x, -z, y)
+// Y-up → Z-up: glTF エクスポート時の逆変換（io/exportGltf.ts の Z-up → Y-up と対）。
 const Y_UP_TO_Z_UP = new Matrix4().makeRotationX(Math.PI / 2)
 
 /** xyz 連続の頂点座標から bbox を計算する（座標系に依存しない。変換前後どちらにも使う） */
