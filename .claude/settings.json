@@ -26,6 +26,19 @@
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command // empty' | grep -q 'git commit' && echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"コミット前チェック: この変更に対応するドキュメント（docs/01〜07 の設計文書・docs/issues/ の該当 Issue・CLAUDE.md）の更新要否を確認すること。更新が必要なら修正してコミットに含める（コミット済みの分なら amend で反映）。不要と判断した場合はそのまま進めてよい。\"}}' || true",
+            "timeout": 10,
+            "statusMessage": "docs 整合リマインダー"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
