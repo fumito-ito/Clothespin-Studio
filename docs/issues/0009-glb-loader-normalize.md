@@ -21,7 +21,7 @@ GLB ファイルをブラウザ内で読み込み、後続（ボクセル化）�
 ```ts
 // three 非依存の純データ（src/types.ts に追加）
 interface MeshData {
-  positions: Float32Array    // xyz 連続・単位 mm・正規化済み
+  positions: Float32Array    // xyz 連続・単位は入力依存（normalizeMesh 適用後は mm・Z-up・接地）
   indices: Uint32Array       // 三角形
   vertexColors?: Float32Array // 頂点ごとの RGB（0-1）。無色は undefined
   // ※当初契約は face ごとだったが、glTF から無損失な頂点ごとへレビューで変更（2026-07-03）
