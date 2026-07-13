@@ -1,11 +1,11 @@
 ---
 id: 9
 title: GLB ローダ + 正規化（スケール / Z-up / 接地）
-status: in-progress
+status: done
 depends: []
 parent: 1
-branch:
-pr:
+branch: issue/0009-glb-loader-normalize
+pr: https://github.com/fumito-ito/Clothespin-Studio/pull/5
 created: 2026-07-03
 ---
 
@@ -21,9 +21,10 @@ GLB ファイルをブラウザ内で読み込み、後続（ボクセル化）�
 ```ts
 // three 非依存の純データ（src/types.ts に追加）
 interface MeshData {
-  positions: Float32Array   // xyz 連続・単位 mm・正規化済み
-  indices: Uint32Array      // 三角形
-  faceColors?: Float32Array // face ごとの RGB（0-1）。無色は undefined
+  positions: Float32Array    // xyz 連続・単位は入力依存（normalizeMesh 適用後は mm・Z-up・接地）
+  indices: Uint32Array       // 三角形
+  vertexColors?: Float32Array // 頂点ごとの RGB（0-1）。無色は undefined
+  // ※当初契約は face ごとだったが、glTF から無損失な頂点ごとへレビューで変更（2026-07-03）
 }
 // src/io/loadModel.ts（新規）: GLTFLoader → メッシュ統合 → MeshData
 // src/domain/normalize.ts（新規・純関数）: bbox から「最長辺=目標mm・Y-up→Z-up・min.z=0」への
@@ -34,7 +35,7 @@ interface MeshData {
 
 - [ ] プログラム生成した既知寸法の GLB を読み込み、正規化後の bbox が
       （最長辺 = 目標 mm・Z-up・min.z = 0）になることを vitest で数値検証
-- [ ] マテリアル色 / 頂点色が `faceColors` へ入ることをテスト（無色 → undefined）
+- [ ] マテリアル色 / 頂点色が `vertexColors` へ入ることをテスト（無色 → undefined）
 - [ ] `normalize` は three の数学クラス以外に依存しない純関数（domain ルール準拠）
 - [ ] 壊れたファイル / 非 GLB は例外でなくエラーメッセージ付き結果で返す（テスト）
 

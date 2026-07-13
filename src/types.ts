@@ -52,3 +52,20 @@ export interface Project {
 
 export const PROJECT_FORMAT = 'clothespin-studio-project' as const
 export const PROJECT_VERSION = 1
+
+/**
+ * 外部モデル（GLB 等）取り込みの中間表現（three 非依存の純データ）。
+ * ボクセル化（後続 Issue）の入力。normalize 適用後は単位 mm・Z-up・接地（min.z = 0）を想定する。
+ */
+export interface MeshData {
+  /** xyz 連続の頂点座標。単位は入力（読み込み元）依存。`normalizeMesh` 適用後は単位 mm・Z-up・接地（min.z = 0） */
+  positions: Float32Array
+  /** 三角形インデックス */
+  indices: Uint32Array
+  /**
+   * 頂点ごとの RGB（0-1）。モデル全体でマテリアル色/頂点色が一切取得できなければ undefined。
+   * 存在する場合は全頂点に有効な色が入る: 色あり・なしのメッシュが混在するモデルでは、
+   * 色を持たないメッシュの頂点は白（1,1,1 = glTF のデフォルトマテリアル色）で補完される
+   */
+  vertexColors?: Float32Array
+}
