@@ -1,7 +1,7 @@
 ---
 id: 10
 title: ソリッドボクセル化（watertight 前提・単色）
-status: open
+status: in-progress
 depends: [8, 9]
 parent: 1
 branch:
