@@ -5,7 +5,7 @@ status: done
 depends: [8, 9]
 parent: 1
 branch: issue/0010-solid-voxelization
-pr:
+pr: https://github.com/fumito-ito/Clothespin-Studio/pull/6
 created: 2026-07-03
 ---
 
