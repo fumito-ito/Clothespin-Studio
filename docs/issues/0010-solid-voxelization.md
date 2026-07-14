@@ -1,11 +1,11 @@
 ---
 id: 10
 title: ソリッドボクセル化（watertight 前提・単色）
-status: open
+status: done
 depends: [8, 9]
 parent: 1
-branch:
-pr:
+branch: issue/0010-solid-voxelization
+pr: https://github.com/fumito-ito/Clothespin-Studio/pull/6
 created: 2026-07-03
 ---
 
@@ -20,17 +20,23 @@ created: 2026-07-03
 
 ```ts
 // src/domain/voxelize.ts（新規・純関数）
-function voxelizeSolid(mesh: MeshData, voxelMm: number):
-  { voxels: Map<string, string>,  // "i,j,k" → colorId（本 Issue では既定色固定）
+function voxelizeSolid(mesh: MeshData, voxelMm: number, colorId: string):
+  { voxels: Map<string, string>,  // "i,j,k" → colorId（本 Issue では引数の colorId 固定）
     seed: string | undefined }     // 充填ボクセルのうち中心最下層近傍（grow の慣行と同じ）
 ```
 
+※実装時に `colorId` を引数化（domain 層がパレットへ依存しないため。呼び出し側が既定色を渡す）。
+
 ## 受入基準
 
-- [ ] 合成の閉球・直方体で、解析解（中心距離 / bbox 内判定）に対する誤判定率 ≤ 2% を vitest で検証
-- [ ] 内部も充填されている（シェルでない）ことをテスト（中心ボクセルが埋まる等）
-- [ ] `seed` が「充填ボクセル・k 最小層・重心最近傍」であることをテスト
-- [ ] 40³ 相当の処理時間を計測しテスト内でログ出力（回帰の目安。ハード制限はしない）
+- [x] 合成の閉球・直方体で誤判定率 ≤ 2% — 閉球 **1.44%**（半径20mm・1280面）/
+      直方体 **0.0047%**（`voxelize.test.ts` の解析解比較テスト）
+- [x] 内部も充填されている — 中心付近 3×3×3 ブロック全充填を検証（軸沿いレイの縮退を避けるため
+      球を非対称オフセット配置）
+- [x] `seed` = 充填ボクセル・k 最小層・重心最近傍 — 直方体で k 最小・(i,j) 重心一致を検証
+      （選定方針は `generator.cellsToVoxels` と同一）
+- [x] 40³ 相当の処理時間ログ — **75.1ms**（約20480面・充填32764ボクセル。spike 実測 85〜103ms と
+      同水準。軸ごと共有 3 グリッドで索引構築を削減）
 
 ## スコープ外
 
